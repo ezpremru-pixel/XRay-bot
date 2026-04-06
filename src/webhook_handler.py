@@ -17,18 +17,19 @@ def check_auth(request):
     if not auth_header or not auth_header.startswith('Basic '): return False
     return base64.b64decode(auth_header[6:]).decode('utf-8') == f"{ADMIN_LOGIN}:{ADMIN_PASS}"
 
-# --- РЕАЛЬНЫЙ МОНИТОРИНГ ---
 async def get_real_server_stats():
     stats = []
-    connector = aiohttp.TCPConnector(ssl=False) # Игнорим ошибки сертификата
+    connector = aiohttp.TCPConnector(ssl=False)
     for srv in SERVERS:
         srv_data = {"name": srv['name'], "flag": srv['flag'], "url": srv['url'], "status": "🔴 Оффлайн", "cpu": "0%", "ram": "0%", "uptime": "-"}
         try:
             cookie_jar = aiohttp.CookieJar(unsafe=True)
             async with aiohttp.ClientSession(cookie_jar=cookie_jar, connector=connector) as session:
-                login_resp = await session.post(f"{srv['url']}/login", data={"username": srv['user'], "password": srv['pass']}, timeout=3)
+                # Очищаем URL от лишних слешей и добавляем /login
+                base_url = srv['url'].rstrip('/')
+                login_resp = await session.post(f"{base_url}/login", data={"username": srv['user'], "password": srv['pass']}, timeout=5)
                 if login_resp.status == 200:
-                    status_resp = await session.post(f"{srv['url']}/server/status", timeout=3)
+                    status_resp = await session.post(f"{base_url}/server/status", timeout=5)
                     if status_resp.status == 200:
                         data = await status_resp.json()
                         obj = data.get("obj", {})
@@ -36,7 +37,8 @@ async def get_real_server_stats():
                         srv_data["cpu"] = f"{obj.get('cpu', 0)}%"
                         srv_data["ram"] = f"{obj.get('mem', {}).get('current', 0) // 1024 // 1024} MB"
                         srv_data["uptime"] = f"{obj.get('uptime', 0) // 86400} дн."
-        except: pass
+        except Exception as e:
+            logging.error(f"Error checking {srv['name']}: {e}")
         stats.append(srv_data)
     return stats
 
@@ -68,7 +70,7 @@ async def yookassa_webhook(request):
                         if u.subscription_end and u.subscription_end > now: u.subscription_end += timedelta(days=days)
                         else: u.subscription_end = now + timedelta(days=days)
                     session.commit()
-            await bot.send_message(user_id, "✅ Оплата принята! Спасибо.")
+            await bot.send_message(user_id, "✅ <b>Оплата принята!</b>\nСрок подписки и лимиты обновлены.", parse_mode='HTML')
         return web.Response(status=200)
     except: return web.Response(status=400)
 
@@ -83,10 +85,11 @@ async def sub_handler(request):
         if len(cleaned) > 0: cleaned[0] += '#🇩🇪_Германия'
         if len(cleaned) > 1: cleaned[1] += '#🇨🇭_Швейцария'
         encoded = base64.b64encode("\n".join(cleaned).encode('utf-8')).decode('utf-8')
-        return web.Response(text=encoded, headers={"profile-title": f"base64:{base64.b64encode('⛩ ВОРОТА VPN ⛩'.encode('utf-8')).decode('utf-8')}"})
+        title = base64.b64encode('⛩ ВОРОТА VPN ⛩'.encode('utf-8')).decode('utf-8')
+        return web.Response(text=encoded, headers={"profile-title": f"base64:{title}"})
     return web.Response(status=404)
 
-# --- АДМИНКА С ТАБАМИ ---
+# --- АДМИНКА ---
 async def admin_dashboard(request):
     if not check_auth(request): return web.Response(status=401, headers={'WWW-Authenticate': 'Basic realm="Admin Area"'})
     users = await db_funcs.get_all_users()
@@ -100,7 +103,7 @@ async def admin_dashboard(request):
         sub = u.subscription_end.strftime('%d.%m.%Y') if u.subscription_end and u.subscription_end > datetime.now() else 'Нет'
         total_devs = u.device_limit + (u.extra_device_limit if u.extra_device_end and u.extra_device_end > datetime.now() else 0)
         
-        user_rows += f'<tr><td>{u.telegram_id}</td><td>@{u.username}</td><td>{sub}</td><td>{total_devs}</td><td><form action="/admin/action/custom_days/{u.telegram_id}" method="POST" class="d-flex gap-1"><input type="number" name="days" class="form-control form-control-sm" style="width:60px" required><button class="btn btn-sm btn-success">OK</button></form></td><td><a href="/admin/history/{u.telegram_id}" class="btn btn-sm btn-info">📜</a> <a href="/admin/action/add_dev/{u.telegram_id}" class="btn btn-sm btn-warning">📱+1</a> <a href="/admin/action/delete/{u.telegram_id}" class="btn btn-sm btn-danger">🗑</a></td></tr>'
+        user_rows += f'<tr><td>{u.telegram_id}</td><td>@{u.username}</td><td>{sub}</td><td>{total_devs}</td><td><form action="/admin/action/custom_days/{u.telegram_id}" method="POST" class="d-flex gap-1"><input type="number" name="days" class="form-control form-control-sm" style="width:60px" required><button class="btn btn-sm btn-success">OK</button></form></td><td><a href="/admin/history/{u.telegram_id}" class="btn btn-sm btn-info">📜</a> <a href="/admin/action/add_dev/{u.telegram_id}" class="btn btn-sm btn-warning">📱+1</a> <a href="/admin/action/delete/{u.telegram_id}" class="btn btn-sm btn-danger" onclick="return confirm(\'Удалить?\')">🗑</a></td></tr>'
         if u.referral_count > 0 or u.balance > 0:
             ref_rows += f'<tr><td>{u.telegram_id}</td><td>@{u.username}</td><td>{u.referral_count}</td><td>{u.balance:.2f} ₽</td><td>{u.referrer_id or "-"}</td></tr>'
 
@@ -116,7 +119,7 @@ async def admin_dashboard(request):
         <div class="tab-content">
             <div class="tab-pane fade show active" id="t1"><table class="table table-dark table-striped text-center"><thead><tr><th>ID</th><th>Ник</th><th>Подписка</th><th>Лимит</th><th>± Дни</th><th>Действия</th></tr></thead><tbody>{user_rows}</tbody></table></div>
             <div class="tab-pane fade" id="t2"><table class="table table-dark table-striped text-center"><thead><tr><th>ID</th><th>Ник</th><th>Рефы</th><th>Баланс</th><th>Кто позвал</th></tr></thead><tbody>{ref_rows}</tbody></table></div>
-            <div class="tab-pane fade" id="t3"><div class="row">{srv_html}</div><div class="mt-4"><a href="/admin/action/mass_update" class="btn btn-outline-warning">🔄 Массово обновить ключи (Добавить страны всем)</a></div></div>
+            <div class="tab-pane fade" id="t3"><div class="row">{srv_html}</div><div class="mt-4"><a href="/admin/action/mass_update" class="btn btn-outline-warning">🔄 Массово обновить ключи</a></div></div>
         </div>
     </body></html>
     """
