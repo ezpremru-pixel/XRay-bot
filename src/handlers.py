@@ -21,6 +21,7 @@ class SupportState(StatesGroup):
 router = Router()
 
 TARIFFS = {
+    "test": {"name": "🧪 ТЕСТ ОПЛАТЫ", "price": 1},
     "1m": {"name": "💎 1 МЕСЯЦ", "price": 129},
     "2m": {"name": "💎 2 МЕСЯЦА", "price": 249},
     "3m": {"name": "💎 3 МЕСЯЦА", "price": 349},
@@ -138,7 +139,7 @@ async def handle_ticket(m: Message, state: FSMContext, bot: Bot):
     await state.clear()
     b = InlineKeyboardBuilder().row(InlineKeyboardButton(text="✍️ Ответить", callback_data=f"ans_{m.from_user.id}"))
     await bot.send_message(ADMIN_ID, f"📩 Тикет от @{m.from_user.username}:\n{m.text}", reply_markup=b.as_markup())
-    await message.answer("✅ Отправлено поддержке.")
+    await m.answer("✅ Отправлено поддержке.") # <-- ВОТ ТУТ БЫЛА ОШИБКА, замени message на m
 
 @router.callback_query(F.data.startswith("ans_"))
 async def start_answer(c: CallbackQuery, state: FSMContext):
