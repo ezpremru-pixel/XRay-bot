@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, func
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Float, func, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timedelta
 import logging
@@ -19,6 +19,12 @@ class User(Base):
     vless_profile_data = Column(String)
     is_admin = Column(Boolean, default=False)
     notified = Column(Boolean, default=False)
+    
+    # НОВЫЕ КОЛОНКИ: Устройства и Рефералка
+    device_limit = Column(Integer, default=3)
+    balance = Column(Float, default=0.0)
+    referrer_id = Column(Integer, nullable=True)
+    referral_count = Column(Integer, default=0)
 
 class StaticProfile(Base):
     __tablename__ = 'static_profiles'
@@ -32,24 +38,42 @@ Session = sessionmaker(bind=engine)
 
 async def init_db():
     Base.metadata.create_all(engine)
-    logger.info("✅ Database tables created")
+    # АВТО-МИГРАЦИЯ: Добавляем колонки в старую базу без потери данных
+    with engine.begin() as conn:
+        try: conn.execute(text("ALTER TABLE users ADD COLUMN device_limit INTEGER DEFAULT 3"))
+        except: pass
+        try: conn.execute(text("ALTER TABLE users ADD COLUMN balance FLOAT DEFAULT 0.0"))
+        except: pass
+        try: conn.execute(text("ALTER TABLE users ADD COLUMN referrer_id INTEGER"))
+        except: pass
+        try: conn.execute(text("ALTER TABLE users ADD COLUMN referral_count INTEGER DEFAULT 0"))
+        except: pass
+    logger.info("✅ Database tables and columns initialized")
 
 async def get_user(telegram_id: int):
     with Session() as session:
         return session.query(User).filter_by(telegram_id=telegram_id).first()
 
-async def create_user(telegram_id: int, full_name: str, username: str = None, is_admin: bool = False):
+async def create_user(telegram_id: int, full_name: str, username: str = None, is_admin: bool = False, referrer_id: int = None):
     with Session() as session:
         user = User(
             telegram_id=telegram_id,
             full_name=full_name,
             username=username,
-            subscription_end=datetime.utcnow() + timedelta(days=3),
-            is_admin=is_admin
+            subscription_end=None, # При регистрации подписки еще нет!
+            is_admin=is_admin,
+            referrer_id=referrer_id
         )
         session.add(user)
+        
+        # Если есть рефовод, увеличиваем ему счетчик
+        if referrer_id:
+            ref_user = session.query(User).filter_by(telegram_id=referrer_id).first()
+            if ref_user:
+                ref_user.referral_count += 1
+                
         session.commit()
-        logger.info(f"✅ New user created: {telegram_id}")
+        logger.info(f"✅ New user created: {telegram_id} (Ref: {referrer_id})")
         return user
 
 async def delete_user_profile(telegram_id: int):
@@ -62,22 +86,16 @@ async def delete_user_profile(telegram_id: int):
             logger.info(f"✅ User profile deleted: {telegram_id}")
 
 async def update_subscription(telegram_id: int, months: int):
-    """Обновляет подписку с учетом текущего состояния"""
     with Session() as session:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
         if user:
             now = datetime.utcnow()
-            # Если подписка активна, добавляем к текущей дате окончания
-            if user.subscription_end > now:
+            if user.subscription_end and user.subscription_end > now:
                 user.subscription_end += timedelta(days=months * 30)
             else:
-                # Если подписка истекла, начинаем с текущей даты
                 user.subscription_end = now + timedelta(days=months * 30)
-            
-            # Сбрасываем флаг уведомления
             user.notified = False
             session.commit()
-            logger.info(f"✅ Subscription updated for {telegram_id}: +{months} months")
             return True
         return False
 
@@ -96,7 +114,6 @@ async def create_static_profile(name: str, vless_url: str):
         profile = StaticProfile(name=name, vless_url=vless_url)
         session.add(profile)
         session.commit()
-        logger.info(f"✅ Static profile created: {name}")
         return profile
 
 async def get_static_profiles():
