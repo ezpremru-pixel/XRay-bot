@@ -91,20 +91,27 @@ async def sub_handler(request):
 
         keys = user.vless_profile_data 
         if keys:
-            clean_text = re.sub(r'<[^>]+>', '', keys)
-            vless_links = [line.split('#')[0] for line in clean_text.split() if line.startswith('vless://')]
+            # ИДЕАЛЬНАЯ ВЫРЕЗКА КЛЮЧЕЙ: Ищем от vless:// до первого спецсимвола (<, пробел, кавычка)
+            vless_raw = re.findall(r'(vless://[^\s<>"\']+)', keys)
             
-            if len(vless_links) > 0: vless_links[0] += '#🇩🇪_Германия'
-            if len(vless_links) > 1: vless_links[1] += '#🇨🇭_Швейцария'
+            cleaned_links = []
+            for link in vless_raw:
+                base = link.split('#')[0] # отрезаем старое имя если есть
+                cleaned_links.append(base)
+            
+            if len(cleaned_links) > 0: cleaned_links[0] += '#🇩🇪_Германия'
+            if len(cleaned_links) > 1: cleaned_links[1] += '#🇨🇭_Швейцария'
                 
-            final_keys_str = "\n".join(vless_links)
+            final_keys_str = "\n".join(cleaned_links)
             encoded_keys = base64.b64encode(final_keys_str.encode('utf-8')).decode('utf-8')
             
             title_base64 = base64.b64encode("⛩ ВОРОТА VPN ⛩".encode('utf-8')).decode('utf-8')
             headers = {"profile-title": f"base64:{title_base64}", "profile-update-interval": "24"}
             return web.Response(text=encoded_keys, headers=headers, content_type='text/plain')
         return web.Response(text="No keys generated", status=404)
-    except: return web.Response(text="Error", status=500)
+    except Exception as e: 
+        logging.error(f"Sub error: {e}")
+        return web.Response(text="Error", status=500)
 
 # --- 3. ВЕБ-АДМИНКА (МЕГА-ПАНЕЛЬ) ---
 async def admin_dashboard(request):
@@ -114,7 +121,6 @@ async def admin_dashboard(request):
     active_users = sum(1 for u in users if u.subscription_end and u.subscription_end > datetime.now())
     total_balance = sum(u.balance for u in users)
     
-    # Мониторинг серверов (простая проверка доступности)
     server_cards = ""
     for srv in SERVERS:
         server_cards += f"""
