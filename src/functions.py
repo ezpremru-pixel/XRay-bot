@@ -17,7 +17,7 @@ SERVERS = [
         "inbound_id": 1,
         "name": "Германия",
         "flag": "🇩🇪",
-        "mon_port": 8000,
+        "mon_port": 80,
         "template": os.getenv("TEMPLATE_1")
     },
     {
@@ -28,7 +28,7 @@ SERVERS = [
         "inbound_id": 1,
         "name": "Нидерланды",
         "flag": "🇳🇱",
-        "mon_port": 8000,
+        "mon_port": 80,
         "template": os.getenv("TEMPLATE_2")
     }
 ]
