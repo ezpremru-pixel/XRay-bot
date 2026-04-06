@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import uuid
 from yookassa import Configuration, Payment
 import database as db_funcs
+from database import Session, User
 from functions import create_vless_profile
 
 Configuration.account_id = '1303776'
@@ -41,7 +42,6 @@ async def cmd_start(m: Message):
     u = await db_funcs.get_user(m.from_user.id)
     if not u: await db_funcs.create_user(m.from_user.id, m.from_user.full_name, m.from_user.username)
     
-    # НОВОЕ МЕНЮ
     kb = [
         [KeyboardButton(text="🚀 ПОДКЛЮЧИТЬ VPN")],
         [KeyboardButton(text="💳 ТАРИФЫ"), KeyboardButton(text="🎁 ТЕСТ 24ч")],
@@ -57,29 +57,37 @@ async def cmd_start(m: Message):
 # --- БЕСПЛАТНЫЙ ПРОКСИ ---
 @router.message(F.text == "🌐 БЕСПЛАТНЫЙ ПРОКСИ")
 async def free_proxy(m: Message):
-    # Заглушка, сюда вставим реальную ссылку на твой MTProto/Socks5
+    b = InlineKeyboardBuilder()
+    # Эта ссылка будет открываться сразу! В админке позже сделаем возможность ее менять
+    b.row(InlineKeyboardButton(text="👉 ПОДКЛЮЧИТЬ ПРОКСИ", url="https://t.me/socks?server=127.0.0.1&port=1080&user=user&pass=pass"))
+    
     text = (
         "🌐 <b>БЕСПЛАТНЫЙ ПРОКСИ ДЛЯ TELEGRAM</b>\n\n"
-        "Нажмите на ссылку ниже, чтобы Telegram работал без зависаний:\n\n"
-        "👉 <a href='https://t.me/socks?server=127.0.0.1&port=1080&user=user&pass=pass'>ПОДКЛЮЧИТЬ ПРОКСИ</a>\n\n"
+        "Жми на кнопку ниже, чтобы Telegram работал без зависаний.\n\n"
         "<i>*Прокси работает только для приложения Telegram. Для всего телефона нужен VPN.</i>"
     )
-    await m.answer(text, disable_web_page_preview=True, parse_mode='HTML')
+    await m.answer(text, reply_markup=b.as_markup(), parse_mode='HTML')
 
-# --- ТЕСТ 24 ЧАСА (ФИКС) ---
+# --- ТЕСТ НА 24 ЧАСА ---
 @router.message(F.text == "🎁 ТЕСТ 24ч")
 async def gift_test(m: Message):
-    u = await db_funcs.get_user(m.from_user.id)
-    # Надежная проверка: если юзер уже сгенерировал ключи, значит он брал тест или подписку
-    if u and u.vless_profile_data:
-        return await m.answer("❌ Вы уже использовали тестовый период или имеете подписку.")
-    try:
-        await db_funcs.update_subscription(u.telegram_id, 1) # Выдаем 1 месяц
-        await m.answer("🎉 <b>Тест активирован!</b> (Выдано 30 дней бонусом)\n\nЖми «🚀 ПОДКЛЮЧИТЬ VPN».")
-    except:
-        await m.answer("⚠️ Ошибка активации базы.")
+    with Session() as session:
+        u_db = session.query(User).filter_by(telegram_id=m.from_user.id).first()
+        if not u_db:
+            return
+            
+        # ЖЕСТКАЯ ПРОВЕРКА: Если дата окончания уже есть (не None), значит тест или тариф уже брали
+        if u_db.subscription_end is not None:
+            await m.answer("❌ Вы уже использовали тестовый период или ранее имели подписку.")
+            return
+            
+        # Выдаем ровно 24 часа
+        u_db.subscription_end = datetime.now() + timedelta(hours=24)
+        session.commit()
+        
+    await m.answer("🎉 <b>Тест на 24 часа активирован!</b>\n\nЖми «🚀 ПОДКЛЮЧИТЬ VPN», чтобы получить ключи.")
 
-# --- ТАРИФЫ (VPN) ---
+# --- ТАРИФЫ ---
 @router.message(F.text == "💳 ТАРИФЫ")
 async def show_tariffs(m: Message):
     builder = InlineKeyboardBuilder()
@@ -87,28 +95,27 @@ async def show_tariffs(m: Message):
         builder.row(InlineKeyboardButton(text=f"🔘 {t['name']} — {t['price']}₽", callback_data=f"buy_{k}"))
     await m.answer("💳 <b>ВЫБЕРИТЕ ТАРИФ VPN:</b>", reply_markup=builder.as_markup(), parse_mode='HTML')
 
-# --- ПРОФИЛЬ, УСТРОЙСТВА И ИНСТРУКЦИЯ ---
+# --- ПРОФИЛЬ И УСТРОЙСТВА ---
 @router.message(F.text == "👤 ПРОФИЛЬ")
 async def profile(m: Message):
     u = await db_funcs.get_user(m.from_user.id)
-    d = u.subscription_end.strftime('%d.%m.%Y') if u.subscription_end else "Нет"
+    d = u.subscription_end.strftime('%d.%m.%Y %H:%M') if u.subscription_end else "Нет"
     
-    # Логика устройств (пока визуальная заглушка на 3, реальную цифру будем брать из базы позже)
     devices_total = 3 
-    devices_used = 1 # Тут будет функция проверки онлайна
+    devices_used = 1
     
     b = InlineKeyboardBuilder()
     b.row(InlineKeyboardButton(text="📖 ИНСТРУКЦИЯ", callback_data="show_instructions"))
     b.row(InlineKeyboardButton(text="📱 Докупить устройства", callback_data="buy_devices"))
-    b.row(InlineKeyboardButton(text="🗑 Управление устройствами", callback_data="manage_devices"))
+    b.row(InlineKeyboardButton(text="🗑 Сброс устройств", callback_data="manage_devices"))
     
     text = (
         f"👤 <b>ВАШ ПРОФИЛЬ</b>\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"🆔 ID: <code>{m.from_user.id}</code>\n"
         f"📅 Подписка до: <b>{d}</b>\n\n"
-        f"📱 <b>Устройства (Лимит IPs): {devices_used}/{devices_total}</b>\n"
-        f"<i>По умолчанию доступно 3 устройства. Если вам нужно подключить больше гаджетов, вы можете расширить лимит.</i>"
+        f"📱 <b>Устройства: {devices_used} / {devices_total}</b>\n"
+        f"<i>По умолчанию доступно 3 устройства. Если нужно больше — расширьте лимит.</i>"
     )
     await m.answer(text, reply_markup=b.as_markup(), parse_mode='HTML')
 
@@ -123,25 +130,26 @@ async def show_help_inline(c: CallbackQuery):
 async def process_help(c: CallbackQuery):
     device = c.data.split("_")[1]
     if device == "ios":
-        text = "🍏 <b>Для iPhone:</b>\n1. Скачай <b>V2Box</b>.\n2. Скопируй свою ссылку (Подключить VPN).\n3. В приложении: Configs -> '+' -> 'Add Subscription'."
+        text = "🍏 <b>Для iPhone:</b>\n1. Скачай <b>V2Box</b>.\n2. Скопируй свою ссылку.\n3. В приложении: Configs -> '+' -> 'Add Subscription'."
     elif device == "android":
-        text = "🤖 <b>Для Android:</b>\n1. Скачай <b>v2rayNG</b>.\n2. Скопируй ссылку.\n3. В приложении: 'Группы подписок' -> '+' -> вставь ссылку и 'Обновить'."
+        text = "🤖 <b>Для Android:</b>\n1. Скачай <b>v2rayNG</b>.\n2. Скопируй ссылку.\n3. 'Группы подписок' -> '+' -> вставь ссылку и 'Обновить'."
     else:
         text = "💻 <b>Для ПК:</b>\n1. Скачай <b>v2rayN</b>.\n2. Скопируй ссылку.\n3. 'Подписка' -> 'Настройки подписки' -> Вставь ссылку -> 'Обновить'."
     await c.message.answer(text, parse_mode='HTML')
 
 @router.callback_query(F.data == "manage_devices")
 async def manage_devices(c: CallbackQuery):
-    await c.answer("Функция сброса активных сессий скоро появится!", show_alert=True)
+    # Тут пока сообщение, потому что нам нужен код functions.py чтобы реально сбрасывать!
+    await c.answer("Скоро! Дорабатываем связь с серверами для сброса.", show_alert=True)
 
 @router.callback_query(F.data == "buy_devices")
 async def buy_devices_menu(c: CallbackQuery):
     b = InlineKeyboardBuilder()
     for k, t in DEVICE_TARIFFS.items():
         b.row(InlineKeyboardButton(text=f"📱 {t['name']} — {t['price']}₽", callback_data=f"buydev_{k}"))
-    await c.message.answer("📱 <b>РАСШИРЕНИЕ ЛИМИТА УСТРОЙСТВ:</b>\n\nКаждое доп. устройство стоит 29₽ на всё время действия подписки.", reply_markup=b.as_markup(), parse_mode='HTML')
+    await c.message.answer("📱 <b>РАСШИРЕНИЕ ЛИМИТА:</b>\n\n+1 устройство = 29₽ (на всё время подписки).", reply_markup=b.as_markup(), parse_mode='HTML')
 
-# --- ОПЛАТА УСТРОЙСТВ И VPN ---
+# --- ОПЛАТА ---
 @router.callback_query(F.data.startswith("buy_") | F.data.startswith("buydev_"))
 async def process_pay(c: CallbackQuery):
     is_device = c.data.startswith("buydev_")
@@ -166,13 +174,14 @@ async def process_pay(c: CallbackQuery):
     except Exception as e:
         await c.message.answer(f"⚠️ Ошибка ЮKassa: {e}")
 
+# --- ПОДКЛЮЧЕНИЕ VPN ---
 @router.message(F.text == "🚀 ПОДКЛЮЧИТЬ VPN")
 async def connect(m: Message):
     u = await db_funcs.get_user(m.from_user.id)
     if not u.subscription_end or u.subscription_end <= datetime.now():
-        return await m.answer("⚠️ Подписка истекла. Пожалуйста, продлите доступ в меню 'Тарифы'.")
+        return await m.answer("⚠️ Подписка истекла. Продлите доступ в меню 'Тарифы'.")
     
-    await m.answer("📡 Подготавливаю вашу персональную ссылку...")
+    await m.answer("📡 Подготавливаю ссылку...")
     if not u.vless_profile_data:
         try:
             await create_vless_profile(u.telegram_id)
@@ -185,12 +194,13 @@ async def connect(m: Message):
         f"<code>{sub_link}</code>\n\n"
         f"<b>Как подключить?</b>\n"
         f"1. Скопируйте ссылку нажатием 👆\n"
-        f"2. Зайдите в приложение V2Box / v2rayNG.\n"
-        f"3. Добавьте ссылку в раздел <b>Subscriptions (Подписки)</b>.\n"
+        f"2. Зайдите в V2Box / v2rayNG.\n"
+        f"3. Добавьте ссылку в <b>Subscriptions (Подписки)</b>.\n"
         f"4. Нажмите «Обновить» (Update)!"
     )
     await m.answer(text, parse_mode='HTML')
 
+# --- ПОДДЕРЖКА ---
 @router.message(F.text == "🆘 ПОДДЕРЖКА")
 async def support_start(m: Message, state: FSMContext):
     await m.answer("📝 Опишите вашу проблему, и администратор ответит вам здесь:")
@@ -214,7 +224,7 @@ async def send_answer(m: Message, state: FSMContext, bot: Bot):
     uid = (await state.get_data()).get("answer_to")
     await state.clear()
     await bot.send_message(uid, f"👨‍💻 <b>Ответ поддержки:</b>\n{m.text}", parse_mode='HTML')
-    await m.answer("✅ Ответ отправлен пользователю.")
+    await m.answer("✅ Ответ отправлен.")
 
 def setup_handlers(dp):
     dp.include_router(router)
