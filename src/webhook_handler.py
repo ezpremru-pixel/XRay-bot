@@ -40,13 +40,11 @@ async def yookassa_webhook(request):
                         user.subscription_end = now + timedelta(days=months * 30)
                     session.commit()
             
-            # Пишем юзеру
             try:
                 await bot.send_message(user_id, f"🎉 <b>Оплата прошла успешно!</b>\nПодписка продлена.\n\nНажмите <b>'🚀 ПОДКЛЮЧИТЬ VPN'</b>.", parse_mode='HTML')
             except Exception as e:
                 logging.error(f"Ошибка отправки юзеру: {e}")
                 
-            # Пишем админу (ТЕБЕ)
             try:
                 await bot.send_message(
                     ADMIN_ID,
@@ -73,13 +71,25 @@ async def sub_handler(request):
 
         keys = user.vless_profile_data 
         if keys:
-            # Очищаем текст от флагов, находим только сами ссылки vless://
-            vless_links = re.findall(r'vless://[^\s]+', keys)
-            clean_keys = "\n".join(vless_links)
+            # Ищем все ссылки vless://, отсекая HTML-теги вроде </code>
+            vless_links = re.findall(r'vless://[^\s<"\'&]+', keys)
             
-            # Кодируем в формат подписки (Base64)
+            # Принудительно меняем названия (всё, что после #)
+            if len(vless_links) > 0:
+                vless_links[0] = vless_links[0].split('#')[0] + '#🇩🇪_Германия'
+            if len(vless_links) > 1:
+                vless_links[1] = vless_links[1].split('#')[0] + '#🇨🇭_Швейцария'
+                
+            clean_keys = "\n".join(vless_links)
             encoded_keys = base64.b64encode(clean_keys.encode('utf-8')).decode('utf-8')
-            return web.Response(text=encoded_keys, content_type='text/plain')
+            
+            # Магия для приложений: передаем имя подписки через заголовки
+            title_base64 = base64.b64encode("⛩ ВОРОТА VPN ⛩".encode('utf-8')).decode('utf-8')
+            headers = {
+                "profile-title": f"base64:{title_base64}",
+                "profile-update-interval": "24"
+            }
+            return web.Response(text=encoded_keys, headers=headers, content_type='text/plain')
         else:
             return web.Response(text="No keys generated", status=404)
     except Exception as e:
