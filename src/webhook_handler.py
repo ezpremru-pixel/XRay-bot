@@ -18,7 +18,7 @@ async def yookassa_webhook(request):
             payment_obj = data.get('object')
             user_id = int(payment_obj.get('metadata').get('user_id'))
             tariff_key = payment_obj.get('metadata').get('tariff')
-            amount = payment_obj.get('amount', {}).get('value')
+            amount = float(payment_obj.get('amount', {}).get('value', 0))
             
             months = 1
             if tariff_key == "2m": months = 2
@@ -34,17 +34,46 @@ async def yookassa_webhook(request):
                 if user:
                     username = user.username or user.full_name
                     now = datetime.now()
+                    
+                    # 1. Продлеваем подписку самому юзеру
                     if user.subscription_end and user.subscription_end > now:
                         user.subscription_end += timedelta(days=months * 30)
                     else:
                         user.subscription_end = now + timedelta(days=months * 30)
+                    
+                    # 2. РЕФЕРАЛЬНАЯ СИСТЕМА (Начисления)
+                    if user.referrer_id:
+                        # Даем +7 дней бонуса покупателю за то, что пришел по рефке
+                        user.subscription_end += timedelta(days=7)
+                        
+                        # Ищем того, кто пригласил (Уровень 1 - 30%)
+                        ref1 = session.query(User).filter_by(telegram_id=user.referrer_id).first()
+                        if ref1:
+                            bonus1 = amount * 0.30
+                            ref1.balance += bonus1
+                            try:
+                                await bot.send_message(ref1.telegram_id, f"💸 <b>Вам начислен бонус!</b>\nВаш реферал оплатил VPN. Вы получили: <b>{bonus1:.2f} ₽</b> (30%)", parse_mode='HTML')
+                            except: pass
+                            
+                            # Ищем "деда" (Уровень 2 - 5%)
+                            if ref1.referrer_id:
+                                ref2 = session.query(User).filter_by(telegram_id=ref1.referrer_id).first()
+                                if ref2:
+                                    bonus2 = amount * 0.05
+                                    ref2.balance += bonus2
+                                    try:
+                                        await bot.send_message(ref2.telegram_id, f"💸 <b>Реферальный бонус 2-го уровня!</b>\nРеферал вашего реферала совершил покупку. Вы получили: <b>{bonus2:.2f} ₽</b> (5%)", parse_mode='HTML')
+                                    except: pass
+                                    
                     session.commit()
             
+            # Уведомляем покупателя
             try:
                 await bot.send_message(user_id, f"🎉 <b>Оплата прошла успешно!</b>\nПодписка продлена.\n\nНажмите <b>'🚀 ПОДКЛЮЧИТЬ VPN'</b>.", parse_mode='HTML')
             except Exception as e:
                 logging.error(f"Ошибка отправки юзеру: {e}")
                 
+            # Уведомляем админа
             try:
                 await bot.send_message(
                     ADMIN_ID,
@@ -71,30 +100,19 @@ async def sub_handler(request):
 
         keys = user.vless_profile_data 
         if keys:
-            # ЖЕЛЕЗОБЕТОННЫЙ ПОИСК ССЫЛОК
-            # Вытягиваем всё, что начинается на vless:// и идет до пробела или тега <
-            vless_raw = re.findall(r'vless://[^<\s]+', keys)
+            clean_text = re.sub(r'<[^>]+>', '', keys)
+            vless_links = []
+            for line in clean_text.split():
+                if line.startswith('vless://'):
+                    base_link = line.split('#')[0]
+                    vless_links.append(base_link)
             
-            cleaned_links = []
-            for link in vless_raw:
-                # Отрезаем всё, что после # (старые непонятные имена)
-                base = link.split('#')[0]
-                cleaned_links.append(base)
-            
-            # Присваиваем свои красивые имена по порядку
-            if len(cleaned_links) > 0:
-                cleaned_links[0] += '#🇩🇪_Германия'
-            if len(cleaned_links) > 1:
-                cleaned_links[1] += '#🇨🇭_Швейцария'
-            if len(cleaned_links) > 2:
-                cleaned_links[2] += '#🇳🇱_Нидерланды' # На будущее, если будет 3-й
+            if len(vless_links) > 0: vless_links[0] += '#🇩🇪_Германия'
+            if len(vless_links) > 1: vless_links[1] += '#🇨🇭_Швейцария'
                 
-            final_keys_str = "\n".join(cleaned_links)
-            
-            # Кодируем для приложения
+            final_keys_str = "\n".join(vless_links)
             encoded_keys = base64.b64encode(final_keys_str.encode('utf-8')).decode('utf-8')
             
-            # Имя подписки
             title_base64 = base64.b64encode("⛩ ВОРОТА VPN ⛩".encode('utf-8')).decode('utf-8')
             headers = {
                 "profile-title": f"base64:{title_base64}",
@@ -104,7 +122,6 @@ async def sub_handler(request):
         else:
             return web.Response(text="No keys generated", status=404)
     except Exception as e:
-        logging.error(f"Sub link error: {e}")
         return web.Response(text="Error", status=500)
 
 def setup_webhook(app, bot):
