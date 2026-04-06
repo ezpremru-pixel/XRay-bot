@@ -71,24 +71,25 @@ async def sub_handler(request):
 
         keys = user.vless_profile_data 
         if keys:
-            # БЕЗОПАСНАЯ ОЧИСТКА КЛЮЧЕЙ
-            # 1. Убираем HTML-мусор типа </code>\n\nun
-            clean_text = re.sub(r'<[^>]+>', '', keys)
-            # 2. Достаем только чистые ссылки vless://
-            vless_links = []
-            for line in clean_text.split():
-                if line.startswith('vless://'):
-                    # Отрезаем старый хэштег, если он есть
-                    base_link = line.split('#')[0]
-                    vless_links.append(base_link)
+            # ЖЕЛЕЗОБЕТОННЫЙ ПОИСК ССЫЛОК
+            # Вытягиваем всё, что начинается на vless:// и идет до пробела или тега <
+            vless_raw = re.findall(r'vless://[^<\s]+', keys)
             
-            # 3. Присваиваем красивые имена
-            if len(vless_links) > 0:
-                vless_links[0] = vless_links[0] + '#🇩🇪_Германия'
-            if len(vless_links) > 1:
-                vless_links[1] = vless_links[1] + '#🇨🇭_Швейцария'
+            cleaned_links = []
+            for link in vless_raw:
+                # Отрезаем всё, что после # (старые непонятные имена)
+                base = link.split('#')[0]
+                cleaned_links.append(base)
+            
+            # Присваиваем свои красивые имена по порядку
+            if len(cleaned_links) > 0:
+                cleaned_links[0] += '#🇩🇪_Германия'
+            if len(cleaned_links) > 1:
+                cleaned_links[1] += '#🇨🇭_Швейцария'
+            if len(cleaned_links) > 2:
+                cleaned_links[2] += '#🇳🇱_Нидерланды' # На будущее, если будет 3-й
                 
-            final_keys_str = "\n".join(vless_links)
+            final_keys_str = "\n".join(cleaned_links)
             
             # Кодируем для приложения
             encoded_keys = base64.b64encode(final_keys_str.encode('utf-8')).decode('utf-8')

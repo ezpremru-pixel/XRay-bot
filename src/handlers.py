@@ -58,8 +58,8 @@ async def cmd_start(m: Message):
 @router.message(F.text == "🌐 БЕСПЛАТНЫЙ ПРОКСИ")
 async def free_proxy(m: Message):
     b = InlineKeyboardBuilder()
-    # Эта ссылка будет открываться сразу! В админке позже сделаем возможность ее менять
-    b.row(InlineKeyboardButton(text="👉 ПОДКЛЮЧИТЬ ПРОКСИ", url="https://t.me/socks?server=127.0.0.1&port=1080&user=user&pass=pass"))
+    # ТВОЯ БОЕВАЯ ССЫЛКА НА ПРОКСИ
+    b.row(InlineKeyboardButton(text="👉 ПОДКЛЮЧИТЬ ПРОКСИ", url="https://t.me/proxy?server=prx.enotfast.net&port=443&secret=eea705ab7e6a662eee8dc1f82b59c93f8f7275747562652e7275"))
     
     text = (
         "🌐 <b>БЕСПЛАТНЫЙ ПРОКСИ ДЛЯ TELEGRAM</b>\n\n"
@@ -76,12 +76,10 @@ async def gift_test(m: Message):
         if not u_db:
             return
             
-        # ЖЕСТКАЯ ПРОВЕРКА: Если дата окончания уже есть (не None), значит тест или тариф уже брали
         if u_db.subscription_end is not None:
             await m.answer("❌ Вы уже использовали тестовый период или ранее имели подписку.")
             return
             
-        # Выдаем ровно 24 часа
         u_db.subscription_end = datetime.now() + timedelta(hours=24)
         session.commit()
         
@@ -139,7 +137,6 @@ async def process_help(c: CallbackQuery):
 
 @router.callback_query(F.data == "manage_devices")
 async def manage_devices(c: CallbackQuery):
-    # Тут пока сообщение, потому что нам нужен код functions.py чтобы реально сбрасывать!
     await c.answer("Скоро! Дорабатываем связь с серверами для сброса.", show_alert=True)
 
 @router.callback_query(F.data == "buy_devices")
