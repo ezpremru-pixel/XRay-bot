@@ -68,7 +68,7 @@ async def process_help(c: CallbackQuery):
 @router.message(F.text == "🎁 ТЕСТ 24ч")
 async def gift_test(m: Message):
     u = await db_funcs.get_user(m.from_user.id)
-    if u.subscription_end:
+    if u and u.subscription_end:
         return await m.answer("❌ Вы уже использовали тест.")
     try:
         await db_funcs.update_subscription(u.telegram_id, 1)
@@ -95,8 +95,15 @@ async def process_pay(c: CallbackQuery):
             "description": f"VPN {t['name']}",
             "metadata": {"user_id": c.from_user.id, "tariff": c.data.split("_")[1]},
             "receipt": {
-                "customer": {"full_name": c.from_user.full_name, "email": "customer@vorota.ru"},
-                "items": [{"description": f"VPN {t['name']}", "quantity": "1.00", "amount": {"value": str(t['price']), "currency": "RUB"}, "vat_code": "1"}]
+                "customer": {"full_name": c.from_user.full_name, "email": "customer@vorotavpn.ru"},
+                "items": [{
+                    "description": f"VPN {t['name']}",
+                    "quantity": "1.00",
+                    "amount": {"value": str(t['price']), "currency": "RUB"},
+                    "vat_code": "1",
+                    "payment_subject": "service",
+                    "payment_mode": "full_payment"
+                }]
             }
         }, uuid.uuid4())
         b = InlineKeyboardBuilder().row(InlineKeyboardButton(text="💰 ОПЛАТИТЬ", url=p.confirmation.confirmation_url))
@@ -131,7 +138,7 @@ async def handle_ticket(m: Message, state: FSMContext, bot: Bot):
     await state.clear()
     b = InlineKeyboardBuilder().row(InlineKeyboardButton(text="✍️ Ответить", callback_data=f"ans_{m.from_user.id}"))
     await bot.send_message(ADMIN_ID, f"📩 Тикет от @{m.from_user.username}:\n{m.text}", reply_markup=b.as_markup())
-    await m.answer("✅ Отправлено поддержке.")
+    await message.answer("✅ Отправлено поддержке.")
 
 @router.callback_query(F.data.startswith("ans_"))
 async def start_answer(c: CallbackQuery, state: FSMContext):
