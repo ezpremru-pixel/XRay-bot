@@ -1,59 +1,91 @@
 from aiohttp import web
 import database as db_funcs
+from database import Session, User
 import logging
 import base64
+import re
+from datetime import datetime, timedelta
+from config import config
+
+ADMIN_ID = config.ADMINS[0] if config.ADMINS else 8179216822
 
 async def yookassa_webhook(request):
     data = await request.json()
+    bot = request.app['bot']
     try:
         event = data.get('event')
         if event == 'payment.succeeded':
             payment_obj = data.get('object')
-            metadata = payment_obj.get('metadata')
-            
-            user_id = metadata.get('user_id')
-            tariff_key = metadata.get('tariff')
+            user_id = int(payment_obj.get('metadata').get('user_id'))
+            tariff_key = payment_obj.get('metadata').get('tariff')
             amount = payment_obj.get('amount', {}).get('value')
-            
-            logging.info(f"💰 ПЛАТЕЖ ПРИШЕЛ! | Юзер ID: {user_id} | Тариф: {tariff_key} | Сумма: {amount} руб.")
             
             months = 1
             if tariff_key == "2m": months = 2
             elif tariff_key == "3m": months = 3
             elif tariff_key == "6m": months = 6
             elif tariff_key == "12m": months = 12
-            elif tariff_key == "test": months = 1 # За 1 рубль даем 1 месяц для теста
+            elif tariff_key == "test": months = 1
             
-            await db_funcs.update_subscription(int(user_id), months)
-            logging.info(f"✅ Юзеру {user_id} успешно выдана подписка на {months} мес.")
+            username = "Неизвестно"
             
+            with Session() as session:
+                user = session.query(User).filter_by(telegram_id=user_id).first()
+                if user:
+                    username = user.username or user.full_name
+                    now = datetime.now()
+                    if user.subscription_end and user.subscription_end > now:
+                        user.subscription_end += timedelta(days=months * 30)
+                    else:
+                        user.subscription_end = now + timedelta(days=months * 30)
+                    session.commit()
+            
+            # Пишем юзеру
+            try:
+                await bot.send_message(user_id, f"🎉 <b>Оплата прошла успешно!</b>\nПодписка продлена.\n\nНажмите <b>'🚀 ПОДКЛЮЧИТЬ VPN'</b>.", parse_mode='HTML')
+            except Exception as e:
+                logging.error(f"Ошибка отправки юзеру: {e}")
+                
+            # Пишем админу (ТЕБЕ)
+            try:
+                await bot.send_message(
+                    ADMIN_ID,
+                    f"🔔 <b>НОВАЯ ОПЛАТА!</b>\n\n"
+                    f"👤 Юзер: @{username} (ID: <code>{user_id}</code>)\n"
+                    f"🛒 Тариф: <b>{tariff_key}</b>\n"
+                    f"💰 Сумма: <b>{amount} руб.</b>",
+                    parse_mode='HTML'
+                )
+            except Exception as e:
+                logging.error(f"Ошибка отправки админу: {e}")
+
         return web.Response(status=200)
     except Exception as e:
         logging.error(f"❌ Ошибка вебхука: {e}")
         return web.Response(status=400)
 
-# Это генератор твоей единой ссылки
 async def sub_handler(request):
     user_id = request.match_info.get('user_id')
     try:
         user = await db_funcs.get_user(int(user_id))
-        # Проверяем, есть ли юзер и активна ли подписка
-        if not user or not user.subscription_end or user.subscription_end < __import__('datetime').datetime.now():
-            return web.Response(text="Subscription expired or not found", status=403)
+        if not user or not user.subscription_end or user.subscription_end < datetime.now():
+            return web.Response(text="Subscription expired", status=403)
 
-        # Пока берем то, что есть в базе. 
-        # Позже мы изменим эту логику, чтобы бот собирал ключи с 2-х хостов.
         keys = user.vless_profile_data 
         if keys:
-            # Приложения XRay понимают подписки только в формате Base64
-            encoded_keys = base64.b64encode(keys.encode('utf-8')).decode('utf-8')
+            # Очищаем текст от флагов, находим только сами ссылки vless://
+            vless_links = re.findall(r'vless://[^\s]+', keys)
+            clean_keys = "\n".join(vless_links)
+            
+            # Кодируем в формат подписки (Base64)
+            encoded_keys = base64.b64encode(clean_keys.encode('utf-8')).decode('utf-8')
             return web.Response(text=encoded_keys, content_type='text/plain')
         else:
-            return web.Response(text="No keys generated yet", status=404)
+            return web.Response(text="No keys generated", status=404)
     except Exception as e:
-        return web.Response(text="Internal Server Error", status=500)
+        return web.Response(text="Error", status=500)
 
-def setup_webhook(app):
+def setup_webhook(app, bot):
+    app['bot'] = bot
     app.router.add_post('/webhook', yookassa_webhook)
-    # Добавили маршрут для короткой ссылки
     app.router.add_get('/sub/{user_id}', sub_handler)

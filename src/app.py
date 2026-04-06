@@ -5,14 +5,13 @@ import warnings
 import coloredlogs
 from config import config
 from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
 from aiogram.types import PreCheckoutQuery
 from handlers import setup_handlers
 from datetime import datetime, timedelta
 from functions import delete_client_by_email
 from database import Session, User, init_db, get_all_users, delete_user_profile
 
-# Импортируем модули для Вебхука ЮKassa
+# Импортируем модули для Вебхука ЮKassa и коротких ссылок
 from aiohttp import web
 from webhook_handler import setup_webhook
 
@@ -22,17 +21,16 @@ coloredlogs.install(level='info')
 logger = logging.getLogger(__name__)
 
 # --- Мини-сервер для приема платежей от ЮKassa ---
-async def start_web_server():
+async def start_web_server(bot: Bot):
     app = web.Application()
-    setup_webhook(app)
+    setup_webhook(app, bot) # Передаем бота внутрь вебхука
     runner = web.AppRunner(app)
     await runner.setup()
-    # Слушаем локальный порт 8080 (Nginx будет пересылать сюда запросы извне)
     site = web.TCPSite(runner, '127.0.0.1', 8080)
     await site.start()
     logger.info("✅ Webhook server for Yookassa started on port 8080")
 
-# --- Проверка подписок (твой старый код) ---
+# --- Проверка подписок ---
 async def check_subscriptions(bot: Bot):
     while True:
         try:
@@ -100,10 +98,11 @@ async def main():
     async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
         await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
-    # 1. Запускаем фоновые задачи
+    # Запускаем фоновые задачи
     asyncio.create_task(check_subscriptions(bot))
-    # 2. Запускаем сервер ЮKassa
-    asyncio.create_task(start_web_server())
+    
+    # Запускаем сервер ЮKassa и коротких ссылок
+    asyncio.create_task(start_web_server(bot))
 
     logger.info("ℹ️  Starting bot...")
     try:

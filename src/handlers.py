@@ -58,11 +58,11 @@ async def show_help(m: Message):
 async def process_help(c: CallbackQuery):
     device = c.data.split("_")[1]
     if device == "ios":
-        text = "🍏 <b>Для iPhone:</b>\n1. Скачай <b>V2Box</b>.\n2. Нажми '🚀 ПОДКЛЮЧИТЬ' и скопируй ключ.\n3. В приложении нажми '+' -> 'Import from Clipboard'."
+        text = "🍏 <b>Для iPhone:</b>\n1. Скачай <b>V2Box</b>.\n2. Нажми '🚀 ПОДКЛЮЧИТЬ' и скопируй ссылку.\n3. В приложении перейди в Configs -> '+' -> 'Add Subscription' и вставь ссылку."
     elif device == "android":
-        text = "🤖 <b>Для Android:</b>\n1. Скачай <b>v2rayNG</b>.\n2. Скопируй ключ из бота.\n3. Нажми '+' -> 'Import from Clipboard'."
+        text = "🤖 <b>Для Android:</b>\n1. Скачай <b>v2rayNG</b>.\n2. Скопируй ссылку из бота.\n3. В меню приложения выбери 'Группы подписок' -> '+' -> вставь ссылку и нажми 'Обновить'."
     else:
-        text = "💻 <b>Для ПК:</b>\n1. Скачай <b>v2rayN</b>.\n2. Скопируй ключ.\n3. Вставь через 'Servers' -> 'Add VLESS server'."
+        text = "💻 <b>Для ПК:</b>\n1. Скачай <b>v2rayN</b>.\n2. Скопируй ссылку.\n3. В приложении: 'Подписка' -> 'Настройки подписки' -> Добавь ссылку и обнови."
     await c.message.answer(text, parse_mode='HTML')
 
 # --- ТЕСТ 24 ЧАСА ---
@@ -123,15 +123,35 @@ async def profile(m: Message):
 async def connect(m: Message):
     u = await db_funcs.get_user(m.from_user.id)
     if not u.subscription_end or u.subscription_end <= datetime.now():
-        return await m.answer("⚠️ Подписка истекла.")
-    await m.answer("📡 Генерирую ключ...")
-    res = await create_vless_profile(u.telegram_id)
-    await m.answer(f"<code>{res}</code>", parse_mode='HTML')
+        return await m.answer("⚠️ Подписка истекла. Пожалуйста, продлите доступ в меню 'Тарифы'.")
+    
+    await m.answer("📡 Подготавливаю вашу персональную ссылку...")
+    
+    # Если профиля еще нет - генерируем
+    if not u.vless_profile_data:
+        try:
+            await create_vless_profile(u.telegram_id)
+        except Exception as e:
+            return await m.answer("❌ Ошибка генерации ключа на сервере.")
+            
+    # Выдаем единую ссылку
+    sub_link = f"https://vorotavpn.ru/sub/{m.from_user.id}"
+    
+    text = (
+        f"✅ <b>ВАША ССЫЛКА-ПОДПИСКА:</b>\n\n"
+        f"<code>{sub_link}</code>\n\n"
+        f"<b>Как подключить?</b>\n"
+        f"1. Скопируйте ссылку нажатием 👆\n"
+        f"2. Зайдите в приложение V2Box / v2rayNG.\n"
+        f"3. Добавьте ссылку в раздел <b>Subscriptions (Подписки)</b>.\n"
+        f"4. Нажмите «Обновить» (Update), и все сервера загрузятся сами!"
+    )
+    await m.answer(text, parse_mode='HTML')
 
 # --- ПОДДЕРЖКА ---
 @router.message(F.text == "🆘 ПОДДЕРЖКА")
 async def support_start(m: Message, state: FSMContext):
-    await m.answer("📝 Опишите проблему:")
+    await m.answer("📝 Опишите вашу проблему, и администратор ответит вам здесь:")
     await state.set_state(SupportState.waiting_for_ticket)
 
 @router.message(SupportState.waiting_for_ticket)
@@ -139,20 +159,20 @@ async def handle_ticket(m: Message, state: FSMContext, bot: Bot):
     await state.clear()
     b = InlineKeyboardBuilder().row(InlineKeyboardButton(text="✍️ Ответить", callback_data=f"ans_{m.from_user.id}"))
     await bot.send_message(ADMIN_ID, f"📩 Тикет от @{m.from_user.username}:\n{m.text}", reply_markup=b.as_markup())
-    await m.answer("✅ Отправлено поддержке.") # <-- ВОТ ТУТ БЫЛА ОШИБКА, замени message на m
+    await m.answer("✅ Отправлено поддержке.")
 
 @router.callback_query(F.data.startswith("ans_"))
 async def start_answer(c: CallbackQuery, state: FSMContext):
     await state.update_data(answer_to=c.data.split("_")[1])
-    await c.message.answer("Пиши ответ:")
+    await c.message.answer("Пиши ответ пользователю:")
     await state.set_state(SupportState.waiting_for_answer)
 
 @router.message(SupportState.waiting_for_answer)
 async def send_answer(m: Message, state: FSMContext, bot: Bot):
     uid = (await state.get_data()).get("answer_to")
     await state.clear()
-    await bot.send_message(uid, f"👨‍💻 Ответ поддержки: {m.text}")
-    await m.answer("✅ Отправлено.")
+    await bot.send_message(uid, f"👨‍💻 <b>Ответ поддержки:</b>\n{m.text}", parse_mode='HTML')
+    await m.answer("✅ Ответ отправлен пользователю.")
 
 def setup_handlers(dp):
     dp.include_router(router)
