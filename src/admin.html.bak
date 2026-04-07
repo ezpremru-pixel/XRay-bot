@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOROTA VPN - PRO ADMIN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 50; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        #app-content { display: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="auth-screen" class="fixed inset-0 flex items-center justify-center bg-slate-900 z-50">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+            <h2 class="text-2xl font-black text-blue-400 mb-2"><i class="fa-solid fa-shield-halved"></i> 2FA ЗАЩИТА</h2>
+            <p class="text-sm text-slate-400 mb-6" id="auth-msg">Нажмите кнопку, чтобы получить код в Telegram</p>
+            <div id="auth-step-1"><button onclick="request2FA()" class="w-full bg-blue-600 py-3 rounded-lg font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/30 transition">Получить код</button></div>
+            <div id="auth-step-2" class="hidden">
+                <input type="text" id="otp-input" placeholder="Код из Telegram" class="w-full bg-slate-800 border border-slate-600 p-3 rounded-lg text-center font-mono text-xl tracking-widest mb-4">
+                <button onclick="verify2FA()" class="w-full bg-green-600 py-3 rounded-lg font-bold hover:bg-green-500 shadow-lg shadow-green-600/30 transition">Войти</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content">
+        <nav class="glass-panel sticky top-0 z-40 p-4 shadow-lg flex flex-wrap gap-4 justify-between items-center">
+            <div class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500"><i class="fa-solid fa-bolt"></i> VOROTA ADMIN</div>
+            <div class="flex gap-2 overflow-x-auto">
+                <button onclick="switchTab('dashboard')" class="tab-btn active-tab px-4 py-2 rounded-lg font-bold bg-blue-600 shadow-lg shadow-blue-500/30 transition">Мониторинг</button>
+                <button onclick="switchTab('users')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Пользователи</button>
+                <button onclick="switchTab('finance')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 relative transition hover:bg-slate-600">Финансы <span id="w-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">0</span></button>
+                <button onclick="switchTab('partners')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Партнеры</button>
+                <button onclick="switchTab('servers')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Сервера</button>
+                <button onclick="switchTab('settings')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Настройки</button>
+            </div>
+        </nav>
+
+        <div class="container mx-auto p-4 md:p-6 pb-20">
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="glass-panel p-4 rounded-xl border-l-4 border-green-500 text-center"><h3 class="text-slate-400 text-xs font-bold uppercase">Выручка</h3><p class="text-2xl font-black text-green-400 mt-1" id="stat-earned">0 ₽</p></div>
+                    <div class="glass-panel p-4 rounded-xl border-l-4 border-slate-500 text-center"><h3 class="text-slate-400 text-xs font-bold uppercase">Запустили бота</h3><p class="text-2xl font-black text-slate-300 mt-1" id="stat-started">0</p></div>
+                    <div class="glass-panel p-4 rounded-xl border-l-4 border-yellow-500 text-center"><h3 class="text-slate-400 text-xs font-bold uppercase">Взяли ТЕСТ</h3><p class="text-2xl font-black text-yellow-400 mt-1" id="stat-tested">0</p></div>
+                    <div class="glass-panel p-4 rounded-xl border-l-4 border-blue-500 text-center"><h3 class="text-slate-400 text-xs font-bold uppercase">Купили</h3><p class="text-2xl font-black text-blue-400 mt-1" id="stat-paid">0</p></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="glass-panel p-6 rounded-xl"><h2 class="text-lg font-bold mb-4 text-purple-400"><i class="fa-solid fa-server mr-2"></i>Состояние узлов (Быстрый рестарт)</h2><div id="server-stats" class="space-y-3">Загрузка...</div></div>
+                    <div class="glass-panel p-6 rounded-xl"><h2 class="text-lg font-bold mb-4 text-green-400"><i class="fa-solid fa-history mr-2"></i>Лента транзакций</h2><div class="overflow-y-auto max-h-64 text-sm"><table class="w-full text-left"><tbody id="tx-table" class="divide-y divide-slate-700/50 font-medium"></tbody></table></div></div>
+                </div>
+            </div>
+
+            <div id="tab-finance" class="tab-content">
+                <div class="glass-panel rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-4 bg-slate-800/50 border-b border-slate-700"><h2 class="text-lg font-bold"><i class="fa-solid fa-money-bill-transfer text-green-400 mr-2"></i>Запросы на вывод</h2></div>
+                    <div class="overflow-x-auto p-4 max-h-[600px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800/80 sticky top-0"><tr><th class="p-3">ID заявки</th><th class="p-3">Дата</th><th class="p-3">Пользователь</th><th class="p-3">Сумма</th><th class="p-3">Реквизиты</th><th class="p-3">Статус</th><th class="p-3 text-right">Действия</th></tr></thead>
+                            <tbody id="finance-table" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-users" class="tab-content">
+                <div class="glass-panel rounded-xl shadow-lg overflow-hidden p-4">
+                    <div class="flex flex-wrap gap-4 justify-between items-center mb-4"><h2 class="text-lg font-bold">База клиентов</h2><input type="text" id="user-search" placeholder="🔍 Поиск по ID или Нику..." class="bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg text-white w-full md:w-64" onkeyup="renderUsers()"></div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800/80 sticky top-0"><tr><th class="p-4">Клиент</th><th class="p-4">Подписка</th><th class="p-4 text-right">Управление</th></tr></thead>
+                            <tbody id="users-table" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-partners" class="tab-content">
+                <div class="glass-panel rounded-xl shadow-lg overflow-hidden p-4">
+                    <h2 class="text-lg font-bold mb-4 text-yellow-400">Реферальная сеть</h2>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800/80 sticky top-0"><tr><th class="p-4">Партнер</th><th class="p-4">Пригласил</th><th class="p-4">Заработал</th><th class="p-4">Баланс</th><th class="p-4 text-right">Детали</th></tr></thead>
+                            <tbody id="partners-table" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-servers" class="tab-content">
+                <div class="glass-panel rounded-xl shadow-lg p-6">
+                    <h2 class="text-lg font-bold mb-4">Добавить новый узел (3X-UI)</h2>
+                    <form onsubmit="event.preventDefault(); apiCall('add_server', 0, {name: this.s_name.value, url: this.s_url.value, ip: this.s_ip.value, user: this.s_user.value, password: this.s_pass.value, flag: this.s_flag.value, template: this.s_template.value})" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" name="s_name" placeholder="Название (USA)" class="bg-slate-900 border border-slate-700 p-3 rounded-lg" required>
+                        <input type="text" name="s_flag" placeholder="Флаг (🇺🇸)" class="bg-slate-900 border border-slate-700 p-3 rounded-lg" required>
+                        <input type="url" name="s_url" placeholder="Ссылка на панель (https://...:2053/xui)" class="bg-slate-900 border border-slate-700 p-3 rounded-lg md:col-span-2" required>
+                        <input type="text" name="s_ip" placeholder="IP адрес" class="bg-slate-900 border border-slate-700 p-3 rounded-lg" required>
+                        <input type="text" name="s_user" placeholder="Логин 3X-UI" class="bg-slate-900 border border-slate-700 p-3 rounded-lg" required>
+                        <input type="password" name="s_pass" placeholder="Пароль 3X-UI" class="bg-slate-900 border border-slate-700 p-3 rounded-lg md:col-span-2" required>
+                        <input type="text" name="s_template" placeholder="Шаблон (vless://uuid@ip...)" class="bg-slate-900 border border-slate-700 p-3 rounded-lg md:col-span-2" required>
+                        <button type="submit" class="md:col-span-2 bg-green-600 py-3 rounded-lg font-bold hover:bg-green-500 transition">Добавить сервер</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="tab-settings" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6 rounded-xl border-t-4 border-yellow-500">
+                        <h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-bullhorn text-yellow-400 mr-2"></i>Массовая рассылка</h2>
+                        <form onsubmit="event.preventDefault(); apiCall('broadcast', 0, {text: this.b_text.value, image_url: this.b_img.value})" class="space-y-4">
+                            <textarea name="b_text" rows="5" placeholder="Текст сообщения (HTML поддерживается)" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg" required></textarea>
+                            <input type="url" name="b_img" placeholder="Ссылка на картинку (URL)" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                            <button type="submit" class="w-full bg-yellow-600 py-3 rounded-lg font-bold hover:bg-yellow-500 transition">Запустить рассылку!</button>
+                        </form>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl border-t-4 border-blue-500">
+                        <h2 class="text-xl font-bold mb-4"><i class="fa-solid fa-robot text-blue-400 mr-2"></i>Тексты и Ссылки</h2>
+                        <form id="settings-form" onsubmit="event.preventDefault(); apiCall('update_settings', 0, {start_text: this.start_text.value, start_image: this.img_start.value, profile_image: this.img_profile.value, tariffs_image: this.img_tariffs.value, partner_image: this.img_partner.value, proxy_link: this.proxy_link.value})" class="space-y-3 text-sm">
+                            <label class="block text-slate-400 font-bold mb-1">Приветствие (/start):</label>
+                            <textarea name="start_text" rows="3" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg"></textarea>
+                            <label class="block text-slate-400 font-bold mb-1">Ссылка на PROXY:</label>
+                            <input type="url" name="proxy_link" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg">
+                            <label class="block text-slate-400 font-bold mb-1 text-xs mt-2">--- ФОТОГРАФИИ В МЕНЮ ---</label>
+                            <input type="text" name="img_start" placeholder="Фото Главное меню" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg">
+                            <input type="text" name="img_profile" placeholder="Фото Профиль" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg">
+                            <input type="text" name="img_tariffs" placeholder="Фото Тарифы" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg">
+                            <input type="text" name="img_partner" placeholder="Фото Партнеры" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg">
+                            <button type="submit" class="w-full bg-blue-600 py-3 mt-4 rounded-lg font-bold hover:bg-blue-500 transition">Сохранить настройки</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="userModal" class="modal">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl w-full max-w-md m-4 border border-slate-600 relative">
+                <button onclick="closeModal('userModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <h2 class="text-2xl font-black mb-1" id="mu-name">User Name</h2>
+                <p class="text-slate-400 text-sm mb-6" id="mu-id">ID: 0000</p>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button onclick="actionPrompt('custom_days', 'Сколько дней добавить? (Можно с минусом)')" class="bg-blue-600/20 text-blue-400 border border-blue-600/50 p-3 rounded-xl hover:bg-blue-600/40 transition"><i class="fa-solid fa-calendar-plus block text-xl mb-1"></i> ± Дни</button>
+                    <button onclick="actionPrompt('edit_balance', 'Сумма для пополнения/списания:')" class="bg-green-600/20 text-green-400 border border-green-600/50 p-3 rounded-xl hover:bg-green-600/40 transition"><i class="fa-solid fa-wallet block text-xl mb-1"></i> ± Баланс</button>
+                    <button onclick="apiCall('limit_inc', currentUserId)" class="bg-purple-600/20 text-purple-400 border border-purple-600/50 p-3 rounded-xl hover:bg-purple-600/40 transition"><i class="fa-solid fa-mobile-screen block text-xl mb-1"></i> +1 Устр.</button>
+                    <button onclick="apiCall('limit_dec', currentUserId)" class="bg-orange-600/20 text-orange-400 border border-orange-600/50 p-3 rounded-xl hover:bg-orange-600/40 transition"><i class="fa-solid fa-minus block text-xl mb-1"></i> -1 Устр.</button>
+                    <button onclick="apiCall('reset_ips', currentUserId)" class="bg-slate-600/40 text-slate-300 border border-slate-500/50 p-3 rounded-xl hover:bg-slate-600/60 transition"><i class="fa-solid fa-rotate block text-xl mb-1"></i> Сброс IP</button>
+                    <button onclick="apiCall('toggle_ban', currentUserId)" id="mu-ban-btn" class="bg-red-600/20 text-red-400 border border-red-600/50 p-3 rounded-xl hover:bg-red-600/40 transition"><i class="fa-solid fa-ban block text-xl mb-1"></i> Бан</button>
+                </div>
+                <button onclick="apiCall('get_user_stats', currentUserId)" class="w-full bg-slate-800 border border-slate-600 p-3 rounded-xl font-bold text-slate-300 hover:bg-slate-700 transition"><i class="fa-solid fa-eye text-blue-400 mr-2"></i> Шпион (Трафик и IP)</button>
+            </div>
+        </div>
+
+        <div id="partnerModal" class="modal">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl w-full max-w-lg m-4 border border-slate-600 relative max-h-[90vh] overflow-y-auto">
+                <button onclick="closeModal('partnerModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <h2 class="text-2xl font-black mb-1 text-yellow-400" id="mp-name">Partner Name</h2>
+                <p class="text-slate-400 text-sm mb-6" id="mp-id">ID: 0000</p>
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 mb-6">
+                    <h3 class="font-bold text-sm text-slate-400 mb-2 uppercase">Индивидуальные проценты</h3>
+                    <div class="flex gap-4">
+                        <div class="flex-1"><label class="text-xs">Уровень 1 (%)</label><input type="number" id="mp-lvl1" class="w-full bg-slate-900 border border-slate-600 p-2 rounded"></div>
+                        <div class="flex-1"><label class="text-xs">Уровень 2 (%)</label><input type="number" id="mp-lvl2" class="w-full bg-slate-900 border border-slate-600 p-2 rounded"></div>
+                    </div>
+                    <button onclick="apiCall('set_ref_percent', currentUserId, {lvl1: document.getElementById('mp-lvl1').value, lvl2: document.getElementById('mp-lvl2').value})" class="mt-3 w-full bg-blue-600 py-2 rounded font-bold hover:bg-blue-500 transition">Сохранить %</button>
+                </div>
+                <h3 class="font-bold text-sm text-slate-400 mb-2 uppercase"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Выплаты</h3>
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 mb-4 max-h-32 overflow-y-auto text-sm" id="mp-withdrawals"></div>
+                <h3 class="font-bold text-sm text-slate-400 mb-2 uppercase"><i class="fa-solid fa-users-viewfinder mr-1"></i> Кого пригласил</h3>
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 max-h-32 overflow-y-auto text-sm" id="mp-referrals"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalData = { users: [], partners: [], withdrawals: [] };
+        let currentUserId = 0;
+        
+        if(localStorage.getItem('admin_2fa_verified')) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            loadData();
+        }
+
+        async function request2FA() {
+            let res = await fetch('/admin/api/request_2fa');
+            if(res.ok) {
+                document.getElementById('auth-step-1').classList.add('hidden');
+                document.getElementById('auth-step-2').classList.remove('hidden');
+                document.getElementById('auth-msg').innerText = "Код отправлен в Telegram бота!";
+            }
+        }
+
+        async function verify2FA() {
+            let code = document.getElementById('otp-input').value;
+            let res = await fetch('/admin/api/verify_2fa', {method:'POST', body:JSON.stringify({code})});
+            let data = await res.json();
+            if(data.status === 'ok') {
+                localStorage.setItem('admin_2fa_verified', 'true');
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                loadData();
+            } else alert(data.error);
+        }
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('bg-blue-600', 'shadow-lg', 'shadow-blue-500/30', 'active-tab'); el.classList.add('bg-slate-700'); });
+            document.getElementById('tab-'+t).classList.add('active');
+            event.target.classList.remove('bg-slate-700');
+            event.target.classList.add('bg-blue-600', 'shadow-lg', 'shadow-blue-500/30', 'active-tab');
+        }
+
+        function openUserModal(uid) {
+            currentUserId = uid;
+            let u = globalData.users.find(x => x.id === uid);
+            document.getElementById('mu-name').innerText = u.full_name || u.username || "Без имени";
+            document.getElementById('mu-id').innerText = `ID: ${u.id} | @${u.username} | Лимит: ${u.limit} устр.`;
+            document.getElementById('mu-ban-btn').innerHTML = u.is_banned ? '<i class="fa-solid fa-check block text-xl mb-1"></i> Разбанить' : '<i class="fa-solid fa-ban block text-xl mb-1"></i> Бан';
+            document.getElementById('userModal').classList.add('active');
+        }
+
+        function openPartnerModal(uid) {
+            currentUserId = uid;
+            let p = globalData.partners.find(x => x.id === uid);
+            document.getElementById('mp-name').innerText = p.username || "Без имени";
+            document.getElementById('mp-id').innerText = `ID: ${p.id} | Баланс: ${p.balance}₽`;
+            document.getElementById('mp-lvl1').value = p.ref_lvl1_pct;
+            document.getElementById('mp-lvl2').value = p.ref_lvl2_pct;
+            
+            let w_html = p.withdrawals.length ? p.withdrawals.map(w => `<div class="flex justify-between border-b border-slate-800 py-1"><span>${w.date}</span><span>${w.amount}₽</span><span class="text-xs text-slate-400">${w.status}</span></div>`).join('') : '<span class="text-slate-500">Нет выплат</span>';
+            document.getElementById('mp-withdrawals').innerHTML = w_html;
+
+            let r_html = p.invited_list.length ? p.invited_list.map(r => `<div class="flex justify-between border-b border-slate-800 py-1"><span>@${r.name}</span><code class="text-xs text-slate-400">${r.id}</code></div>`).join('') : '<span class="text-slate-500">Пока никого не пригласил</span>';
+            document.getElementById('mp-referrals').innerHTML = r_html;
+
+            document.getElementById('partnerModal').classList.add('active');
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function actionPrompt(action, text) {
+            let val = prompt(text);
+            if(val) apiCall(action, currentUserId, action === 'custom_days' ? {days: val} : {amount: val});
+        }
+
+        async function apiCall(action, id = 0, payload = {}) {
+            let res = await fetch(`/admin/api/action/${id}/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            let data = await res.json();
+            if(data.status === 'ok') {
+                if(data.msg) alert(data.msg);
+                if(data.stats) alert(`📊 ТРАФИК:\n⬇️ Скачано: ${data.stats.down_gb} ГБ\n⬆️ Отправлено: ${data.stats.up_gb} ГБ\n🌐 Всего: ${data.stats.total_gb} ГБ\n\n👁 ОНЛАЙН СЕССИИ (IP):\n${data.stats.ips.join('\n') || 'Нет активных сессий'}`);
+                loadData(); // Перезагружаем сразу
+                closeModal('userModal'); closeModal('partnerModal');
+            } else alert("Ошибка: " + data.error);
+        }
+
+        async function loadData() {
+            try {
+                let res = await fetch('/admin/api/data');
+                if(res.status === 401) return;
+                globalData = await res.json();
+                
+                document.getElementById('stat-earned').innerText = globalData.analytics.total_earned + " ₽";
+                document.getElementById('stat-started').innerText = globalData.analytics.funnel.started;
+                document.getElementById('stat-tested').innerText = globalData.analytics.funnel.tested;
+                document.getElementById('stat-paid').innerText = globalData.analytics.funnel.paid;
+                
+                // Рендер серверов с кнопкой Рестарт
+                document.getElementById('server-stats').innerHTML = globalData.servers.map(s => `
+                    <div class="bg-slate-800 p-4 rounded-xl flex justify-between items-center shadow border border-slate-700">
+                        <div>
+                            <span class="text-2xl mr-2">${s.flag}</span> <b class="text-lg">${s.name}</b> <span class="text-xs text-slate-400">(${s.ip})</span><br>
+                            <span class="${s.active?'text-green-400':'text-red-400'} font-bold text-xs uppercase tracking-widest">${s.active?'🟢 Онлайн':'🔴 Оффлайн'}</span>
+                        </div>
+                        <button onclick="if(confirm('Рестартнуть ядро XRay на сервере ${s.name}? Это сбросит лаги и активные сессии.')) apiCall('restart_node', ${s.id})" class="bg-red-600/20 text-red-400 border border-red-600/50 px-4 py-2 rounded-lg font-bold hover:bg-red-600 hover:text-white transition"><i class="fa-solid fa-power-off"></i> Рестарт</button>
+                    </div>
+                `).join('');
+
+                document.getElementById('tx-table').innerHTML = globalData.analytics.transactions.map(tx => `<tr><td class="p-3 text-slate-400 text-xs">${tx.date}</td><td class="p-3"><code>${tx.uid}</code></td><td class="p-3 text-sm">${tx.action}</td><td class="p-3 text-green-400 font-bold">+${tx.amount}₽</td></tr>`).join('');
+
+                if(globalData.settings) {
+                    let sf = document.getElementById('settings-form');
+                    sf.start_text.value = globalData.settings.start_text;
+                    sf.img_start.value = globalData.settings.start_image;
+                    sf.img_profile.value = globalData.settings.profile_image;
+                    sf.img_tariffs.value = globalData.settings.tariffs_image;
+                    sf.img_partner.value = globalData.settings.partner_image;
+                    sf.proxy_link.value = globalData.settings.proxy_link;
+                }
+
+                renderUsers(); renderFinance(); renderPartners();
+            } catch(e) { console.error("Ошибка обновления"); }
+        }
+
+        function renderUsers() {
+            let q = document.getElementById('user-search').value.toLowerCase();
+            document.getElementById('users-table').innerHTML = globalData.users.filter(u => String(u.id).includes(q) || String(u.username).toLowerCase().includes(q)).map(u => 
+                `<tr class="${u.is_banned ? 'opacity-40' : ''} hover:bg-slate-800/50 transition">
+                    <td class="p-4 font-medium"><code>${u.id}</code><br><span class="text-xs text-blue-400">@${u.username}</span></td>
+                    <td class="p-4 ${u.sub_end === 'Истекла' ? 'text-red-400' : 'text-green-400'} font-bold">${u.sub_end}</td>
+                    <td class="p-4 text-right"><button onclick="openUserModal(${u.id})" class="bg-blue-600/20 text-blue-400 border border-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-600 hover:text-white transition"><i class="fa-solid fa-gear"></i> Настроить</button></td>
+                </tr>`
+            ).join('');
+        }
+
+        function renderFinance() {
+            let pending = globalData.withdrawals.filter(w => w.status.includes('Ожидание')).length;
+            if(pending > 0) { document.getElementById('w-badge').innerText = pending; document.getElementById('w-badge').classList.remove('hidden'); }
+            else document.getElementById('w-badge').classList.add('hidden');
+
+            document.getElementById('finance-table').innerHTML = globalData.withdrawals.map(w => {
+                let badge = w.status.includes('Выполнено') ? 'text-green-400' : (w.status.includes('Отклонено') ? 'text-red-400' : 'text-yellow-400 font-bold animate-pulse');
+                let btns = w.status.includes('Ожидание') ? `<button onclick="if(confirm('Одобрить выплату ${w.amount}₽?')) apiCall('approve_withdrawal', ${w.id})" class="bg-green-600 px-3 py-1 rounded-lg text-xs text-white font-bold mr-2 hover:bg-green-500 transition">Одобрить</button><button onclick="let r=prompt('Укажите причину отказа:'); if(r) apiCall('reject_withdrawal', ${w.id}, {reason:r})" class="bg-red-600 px-3 py-1 rounded-lg text-xs text-white font-bold hover:bg-red-500 transition">Отклонить</button>` : '';
+                return `<tr class="hover:bg-slate-800/30"><td class="p-4 text-xs text-slate-500">#${w.id}</td><td class="p-4">${w.date}</td><td class="p-4"><code>${w.uid}</code><br><span class="text-xs text-blue-400">@${w.username}</span></td><td class="p-4 font-black text-yellow-400">${w.amount} ₽</td><td class="p-4 font-mono text-xs text-slate-300">${w.method}: ${w.details}</td><td class="p-4 font-bold ${badge}">${w.status}</td><td class="p-4 text-right">${btns}</td></tr>`;
+            }).join('');
+        }
+
+        function renderPartners() {
+            document.getElementById('partners-table').innerHTML = globalData.partners.map(p => 
+                `<tr class="hover:bg-slate-800/50 transition">
+                    <td class="p-4 font-medium"><code>${p.id}</code><br><span class="text-xs text-blue-400">@${p.username}</span></td>
+                    <td class="p-4 text-blue-300">L1: <b>${p.refs_lvl1}</b> чел<br>L2: <b>${p.refs_lvl2}</b> чел</td>
+                    <td class="p-4 text-green-300">L1: <b>${p.earned_lvl1}₽</b><br>L2: <b>${p.earned_lvl2}₽</b></td>
+                    <td class="p-4 font-black text-yellow-400">${p.balance} ₽</td>
+                    <td class="p-4 text-right"><button onclick="openPartnerModal(${p.id})" class="bg-yellow-600/20 text-yellow-500 border border-yellow-600 px-4 py-2 rounded-lg font-bold hover:bg-yellow-600 hover:text-white transition"><i class="fa-solid fa-chart-pie"></i> Детали</button></td>
+                </tr>`
+            ).join('');
+        }
+
+        window.onload = loadData; 
+        setInterval(loadData, 10000); // Автообновление каждые 10 секунд!
+    </script>
+</body>
+</html>
