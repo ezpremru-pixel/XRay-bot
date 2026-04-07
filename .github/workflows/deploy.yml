@@ -23,5 +23,12 @@ jobs:
           script: |
             cd ~/XRay-bot
             git pull origin main
-            pkill -9 -f python3 || true
+            # Убиваем старые процессы Python аккуратно
+            pkill -f "src/app.py" || true
+            sleep 2
+            # Запускаем бота с ограничением по памяти, если нужно, 
+            # и отправляем в фон через nohup
             nohup python3 src/app.py > bot.log 2>&1 &
+            sleep 5
+            # Проверяем, выжил ли процесс
+            pgrep -f "src/app.py" && echo "✅ Бот успешно запущен" || (echo "❌ Бот упал при старте" && exit 1)
