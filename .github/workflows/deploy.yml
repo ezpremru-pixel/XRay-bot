@@ -17,10 +17,11 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
           script: |
             cd ~/XRay-bot
             git pull origin main
             source .venv/bin/activate
             pip install -r requirements.txt
-            # Команда перезапуска бота (замени на свою, если используешь systemd)
-            pm2 restart xray_bot || systemctl restart xray_bot
+            # Если используешь systemd для работы бота:
+            systemctl restart xray_bot || echo "Service not found, manual restart needed"
