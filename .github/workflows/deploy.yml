@@ -1,0 +1,25 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Execute remote ssh commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: 92.42.96.175
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # Это нужно добавить в Secrets на GitHub
+          script: |
+            cd ~/XRay-bot
+            git pull origin main
+            # Перезапуск бота (замени на свою команду, если она другая)
+            pkill -9 -f python3
+            nohup python3 src/app.py > bot.log 2>&1 &
