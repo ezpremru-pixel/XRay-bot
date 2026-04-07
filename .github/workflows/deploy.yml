@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy GateVPN
 
 on:
   push:
@@ -9,27 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Execute remote ssh commands
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
         with:
-          host: 92.42.96.175
-          username: root
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # ЭТИ ДВЕ СТРОКИ РЕШАЮТ 90% ПРОБЛЕМ:
-          fingerprint: ${{ secrets.SSH_FINGERPRINT }}
-          proxy_timeout: 30s
           script: |
             cd ~/XRay-bot
             git pull origin main
-            # Убиваем старый процесс, если он есть
-            pkill -f "src/app.py" || true
-            sleep 2
-            # Запуск с ПРАВИЛЬНЫМ перенаправлением, чтобы SSH не висел
-            nohup python3 src/app.py > bot.log 2>&1 & 
-            # Даем боту 3 секунды проснуться
-            sleep 3
-            # Отключаемся от сервера, оставляя бота в фоне
-            disallow -a || true
-            exit 0
+            source .venv/bin/activate
+            pip install -r requirements.txt
+            # Команда перезапуска бота (замени на свою, если используешь systemd)
+            pm2 restart xray_bot || systemctl restart xray_bot
