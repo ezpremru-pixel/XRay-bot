@@ -21,7 +21,3 @@ jobs:
           script: |
             cd ~/XRay-bot
             git pull origin main
-            source .venv/bin/activate
-            pip install -r requirements.txt
-            # Если используешь systemd для работы бота:
-            systemctl restart xray_bot || echo "Service not found, manual restart needed"
