@@ -17,6 +17,9 @@ jobs:
           host: 92.42.96.175
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # ЭТИ ДВЕ СТРОКИ РЕШАЮТ 90% ПРОБЛЕМ:
+          fingerprint: ${{ secrets.SSH_FINGERPRINT }}
+          proxy_timeout: 30s
           script: |
             cd ~/XRay-bot
             git pull origin main
