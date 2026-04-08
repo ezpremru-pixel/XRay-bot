@@ -1,0 +1,12 @@
+nohup: ignoring input
+2026-04-08 20:27:35 vm1591745.vds.as210546.net database[58250] INFO ✅ Database initialized and migrated
+2026-04-08 20:27:35 vm1591745.vds.as210546.net __main__[58250] INFO ✅ Admin status updated
+2026-04-08 20:27:35 vm1591745.vds.as210546.net __main__[58250] INFO ℹ️  Starting bot...
+2026-04-08 20:27:35 vm1591745.vds.as210546.net aiogram.dispatcher[58250] INFO Start polling
+2026-04-08 20:27:35 vm1591745.vds.as210546.net __main__[58250] INFO ✅ Web server started
+2026-04-08 20:27:35 vm1591745.vds.as210546.net aiogram.dispatcher[58250] INFO Run polling for bot @vorotavpn_bot id=8755858332 - '⛩ ВОРОТА VPN ⛩'
+2026-04-08 20:27:42 vm1591745.vds.as210546.net aiohttp.access[58250] INFO 127.0.0.1 [08/Apr/2026:19:27:40 +0100] "GET /admin/api/data HTTP/1.0" 200 8154 "https://vorotavpn.ru/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+2026-04-08 20:28:20 vm1591745.vds.as210546.net __main__[58250] ERROR ❌ ОШИБКА ВНУТРИ: Not Found
+2026-04-08 20:28:20 vm1591745.vds.as210546.net aiohttp.access[58250] INFO 127.0.0.1 [08/Apr/2026:19:28:20 +0100] "GET /sub/8179216822 HTTP/1.0" 404 175 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+2026-04-08 20:28:42 vm1591745.vds.as210546.net aiohttp.access[58250] INFO 127.0.0.1 [08/Apr/2026:19:28:40 +0100] "GET /admin/api/data HTTP/1.0" 200 8154 "https://vorotavpn.ru/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+2026-04-08 20:29:42 vm1591745.vds.as210546.net aiohttp.access[58250] INFO 127.0.0.1 [08/Apr/2026:19:29:40 +0100] "GET /admin/api/data HTTP/1.0" 200 8154 "https://vorotavpn.ru/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"

@@ -2,11 +2,12 @@ import aiohttp
 import os
 import uuid
 import json
+import time
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# АВТО-МИГРАЦИЯ СЕРВЕРОВ: Читаем из базы
 def load_servers_from_db():
     from database import Session, Server
     with Session() as session:
@@ -26,20 +27,42 @@ def load_servers_from_db():
 try: SERVERS = load_servers_from_db()
 except Exception as e: SERVERS = []
 
+# ЖЕЛЕЗОБЕТОННЫЙ TCP-ПИНГ
 async def get_real_server_stats():
     stats = []
-    connector = aiohttp.TCPConnector(ssl=False)
-    async with aiohttp.ClientSession(connector=connector) as session:
-        for srv in SERVERS:
-            srv_data = {"name": srv['name'], "flag": srv['flag'], "status": "🔴 Оффлайн", "cpu": "0%", "ram": "0%", "uptime": "-"}
+    for srv in SERVERS:
+        srv_data = {"name": srv['name'], "flag": srv['flag'], "status": "🔴 Оффлайн", "cpu": "-", "ram": "-", "uptime": "-", "ping": "Ошибка"}
+        try:
+            start_time = time.time()
+            url = srv.get('url', '')
+
+            # Вычисляем порт панели для пинга
+            port = 443 if "https://" in url else 80
+            clean_url = url.replace("https://", "").replace("http://", "").split("/")[0]
+            if ":" in clean_url:
+                port = int(clean_url.split(":")[1])
+
+            # Чистый TCP пинг (идеально точный)
+            reader, writer = await asyncio.wait_for(asyncio.open_connection(srv['ip'], port), timeout=2.0)
+            ping_ms = int((time.time() - start_time) * 1000)
+            writer.close()
+            await writer.wait_closed()
+
+            srv_data["ping"] = f"{ping_ms} ms"
+            srv_data["status"] = "🟢 Онлайн"
+
+            # Если жив, пробуем забрать статистику
             try:
-                async with session.get(f"http://{srv['ip']}:{srv['mon_port']}", timeout=2) as resp:
-                    if resp.status == 200: srv_data.update(await resp.json())
+                async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+                    async with session.get(f"http://{srv['ip']}:{srv['mon_port']}", timeout=2) as stat_resp:
+                        if stat_resp.status == 200:
+                            srv_data.update(await stat_resp.json())
             except: pass
-            stats.append(srv_data)
+        except Exception as e:
+            pass
+        stats.append(srv_data)
     return stats
 
-# Шпион IP-адресов и Трафика
 async def get_user_traffic_and_ips(telegram_id):
     email_str = str(telegram_id)
     connector = aiohttp.TCPConnector(ssl=False)
@@ -72,7 +95,7 @@ async def get_user_traffic_and_ips(telegram_id):
                                 if client.get('email') == email_str: active_ips.append(f"{server['flag']} {client.get('ip', 'Unknown')}")
                 except: pass
         except: pass
-        
+
     return {"up_gb": round(total_up / (1024**3), 2), "down_gb": round(total_down / (1024**3), 2), "total_gb": round((total_up + total_down) / (1024**3), 2), "ips": active_ips}
 
 async def create_vless_profile(telegram_id, device_limit=3):
@@ -88,16 +111,35 @@ async def create_vless_profile(telegram_id, device_limit=3):
                 await session.post(f"{base_url}/login", data={"username": server['user'], "password": server['pass']}, timeout=5)
                 data = await (await session.get(f"{base_url}/panel/api/inbounds/list", timeout=5)).json()
                 existing_uuid = None
+                flow = ""
+                
                 for inbound in data.get('obj', []):
                     if inbound.get('id') == server['inbound_id']:
-                        for client in json.loads(inbound.get('settings', '{}')).get('clients', []):
+                        clients = json.loads(inbound.get('settings', '{}')).get('clients', [])
+                        
+                        # Умный поиск параметра flow (для VLESS XTLS)
+                        if clients and isinstance(clients, list) and len(clients) > 0:
+                            if 'flow' in clients[0] and clients[0]['flow']:
+                                flow = clients[0]['flow']
+                                
+                        for client in clients:
                             if str(client.get('email')) == email_str:
                                 existing_uuid = client.get('id'); break
+                                
                 client_data = {"id": existing_uuid or client_uuid, "email": email_str, "limitIp": device_limit, "totalGB": 0, "expiryTime": 0, "enable": True, "tgId": "", "subId": ""}
+                
+                if flow:
+                    client_data["flow"] = flow
+                    
                 payload = {"id": server['inbound_id'], "settings": json.dumps({"clients": [client_data]})}
-                if existing_uuid: await session.post(f"{base_url}/panel/api/inbounds/updateClient/{existing_uuid}", json=payload, timeout=5)
-                else: await session.post(f"{base_url}/panel/api/inbounds/addClient", json=payload, timeout=5)
-        except: pass
+                
+                if existing_uuid: 
+                    await session.post(f"{base_url}/panel/api/inbounds/updateClient/{existing_uuid}", json=payload, timeout=5)
+                else: 
+                    await session.post(f"{base_url}/panel/api/inbounds/addClient", json=payload, timeout=5)
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to create profile on {server.get('name')}: {e}")
     return True
 
 async def reset_client_ips(telegram_id):

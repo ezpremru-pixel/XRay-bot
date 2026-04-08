@@ -39,6 +39,7 @@
                 <button onclick="switchTab('dashboard')" class="tab-btn active-tab px-4 py-2 rounded-lg font-bold bg-blue-600 shadow-lg shadow-blue-500/30 transition">Мониторинг</button>
                 <button onclick="switchTab('users')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Пользователи</button>
                 <button onclick="switchTab('finance')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 relative transition hover:bg-slate-600">Финансы <span id="w-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">0</span></button>
+                <button onclick="switchTab('bindings')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Привязки</button>
                 <button onclick="switchTab('partners')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Партнеры</button>
                 <button onclick="switchTab('servers')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Сервера</button>
                 <button onclick="switchTab('settings')" class="tab-btn px-4 py-2 rounded-lg font-bold bg-slate-700 transition hover:bg-slate-600">Настройки</button>
@@ -55,8 +56,22 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="glass-panel p-6 rounded-xl"><h2 class="text-lg font-bold mb-4 text-purple-400"><i class="fa-solid fa-server mr-2"></i>Состояние узлов (Быстрый рестарт)</h2><div id="server-stats" class="space-y-3">Загрузка...</div></div>
+                    <div class="glass-panel p-6 rounded-xl"><h2 class="text-lg font-bold mb-4 text-purple-400"><i class="fa-solid fa-server mr-2"></i>Состояние узлов</h2><div id="server-stats" class="space-y-3">Загрузка...</div></div>
                     <div class="glass-panel p-6 rounded-xl"><h2 class="text-lg font-bold mb-4 text-green-400"><i class="fa-solid fa-history mr-2"></i>Лента транзакций</h2><div class="overflow-y-auto max-h-64 text-sm"><table class="w-full text-left"><tbody id="tx-table" class="divide-y divide-slate-700/50 font-medium"></tbody></table></div></div>
+                </div>
+            </div>
+
+            <div id="tab-bindings" class="tab-content">
+                <div class="glass-panel rounded-xl shadow-lg overflow-hidden p-4">
+                    <div class="flex flex-wrap gap-4 justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-blue-400"><i class="fa-solid fa-credit-card mr-2"></i>Активные рекурренты (ЮKassa)</h2>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800/80 sticky top-0"><tr><th class="p-4">Пользователь</th><th class="p-4">Способ оплаты</th><th class="p-4">След. списание</th></tr></thead>
+                            <tbody id="bindings-table" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -119,7 +134,6 @@
                         <input type="text" name="domain" placeholder="Например: solk.pw" required class="flex-1 bg-slate-900 border border-slate-700 p-3 rounded-lg text-white placeholder-slate-500 focus:border-red-500 focus:outline-none">
                         <button type="submit" class="bg-red-600 px-8 py-3 rounded-lg font-bold hover:bg-red-500 transition text-white shadow-lg shadow-red-600/30 whitespace-nowrap"><i class="fa-solid fa-bolt mr-2"></i>Сменить домен</button>
                     </form>
-                    <p class="text-slate-400 text-sm mt-3">Если текущий домен заблокировали в РФ, пропишите новый (например <code>solk.pw</code>). Бот обновит настройки и начнет выдавать новые ссылки моментально.</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,6 +203,11 @@
     </div>
 
     <script>
+        const AUTH_HEADERS = {
+            'Authorization': 'Basic ' + btoa('admin:vorota2026'),
+            'Content-Type': 'application/json'
+        };
+
         let globalData = { users: [], partners: [], withdrawals: [] };
         let currentUserId = 0;
 
@@ -199,26 +218,109 @@
         }
 
         async function request2FA() {
-            let res = await fetch('/admin/api/request_2fa');
-            if(res.ok) {
-                document.getElementById('auth-step-1').classList.add('hidden');
-                document.getElementById('auth-step-2').classList.remove('hidden');
-                document.getElementById('auth-msg').innerText = "Код отправлен в Telegram бота!";
+            try {
+                document.getElementById('auth-msg').innerText = "Отправка запроса...";
+                let res = await fetch('/admin/api/request_2fa', { headers: AUTH_HEADERS });
+
+                if(res.ok) {
+                    document.getElementById('auth-step-1').classList.add('hidden');
+                    document.getElementById('auth-step-2').classList.remove('hidden');
+                    document.getElementById('auth-msg').innerText = "Код отправлен в Telegram бота!";
+                } else {
+                    alert("Ошибка сервера. Код: " + res.status);
+                    document.getElementById('auth-msg').innerText = "Ошибка " + res.status;
+                }
+            } catch(e) {
+                alert("Сетевая ошибка: " + e.message);
             }
         }
 
         async function verify2FA() {
             let code = document.getElementById('otp-input').value;
-            let res = await fetch('/admin/api/verify_2fa', {method:'POST', body:JSON.stringify({code})});
-            let data = await res.json();
-            if(data.status === 'ok') {
-                localStorage.setItem('admin_2fa_verified', 'true');
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('app-content').style.display = 'block';
-                loadData();
-            } else alert(data.error);
+            if(!code) return alert("Введите код!");
+            try {
+                let res = await fetch('/admin/api/verify_2fa', {
+                    method: 'POST',
+                    headers: AUTH_HEADERS,
+                    body: JSON.stringify({code})
+                });
+                let data = await res.json();
+                if(data.status === 'ok') {
+                    localStorage.setItem('admin_2fa_verified', 'true');
+                    document.getElementById('auth-screen').style.display = 'none';
+                    document.getElementById('app-content').style.display = 'block';
+                    loadData();
+                } else {
+                    alert(data.error || "Неверный код!");
+                }
+            } catch(e) {
+                alert("Сетевая ошибка: " + e.message);
+            }
         }
 
+        async function apiCall(action, id = 0, payload = {}) {
+            try {
+                let res = await fetch(`/admin/api/action/${id}/${action}`, {
+                    method: 'POST',
+                    headers: AUTH_HEADERS,
+                    body: JSON.stringify(payload)
+                });
+                let data = await res.json();
+
+                if(data.status === 'ok') {
+                    if(data.msg) alert(data.msg);
+                    if(data.stats) alert(`📊 ТРАФИК:\n⬇️ Скачано: ${data.stats.down_gb} ГБ\n⬆️ Отправлено: ${data.stats.up_gb} ГБ\n🌐 Всего: ${data.stats.total_gb} ГБ\n\n👁 ОНЛАЙН СЕССИИ (IP):\n${data.stats.ips.join('\n') || 'Нет активных сессий'}`);
+                    loadData();
+                    closeModal('userModal'); closeModal('partnerModal');
+                } else {
+                    alert("Ошибка: " + data.error);
+                }
+            } catch(e) {
+                alert("Сетевая ошибка: " + e.message);
+            }
+        }
+
+        async function loadData() {
+            try {
+                let res = await fetch('/admin/api/data', { headers: AUTH_HEADERS });
+                if(res.status === 401) {
+                    console.error("Auth Error");
+                    return;
+                }
+                globalData = await res.json();
+
+                document.getElementById('stat-earned').innerText = globalData.analytics.total_earned + " ₽";
+                document.getElementById('stat-started').innerText = globalData.analytics.funnel.started;
+                document.getElementById('stat-tested').innerText = globalData.analytics.funnel.tested;
+                document.getElementById('stat-paid').innerText = globalData.analytics.funnel.paid;
+
+                document.getElementById('server-stats').innerHTML = globalData.servers.map(s => `
+                    <div class="bg-slate-800 p-4 rounded-xl flex justify-between items-center shadow border border-slate-700">
+                        <div>
+                            <span class="text-2xl mr-2">${s.flag}</span> <b class="text-lg">${s.name}</b> <span class="text-xs text-slate-400">(${s.ip})</span><br>
+                            <span class="${s.active?'text-green-400':'text-red-400'} font-bold text-xs uppercase tracking-widest">${s.active?'🟢 Онлайн':'🔴 Оффлайн'}</span>
+                        </div>
+                        <button onclick="if(confirm('Рестартнуть ядро XRay на сервере ${s.name}?')) apiCall('restart_node', ${s.id})" class="bg-red-600/20 text-red-400 border border-red-600/50 px-4 py-2 rounded-lg font-bold hover:bg-red-600 hover:text-white transition"><i class="fa-solid fa-power-off"></i> Рестарт</button>
+                    </div>
+                `).join('');
+
+                document.getElementById('tx-table').innerHTML = globalData.analytics.transactions.map(tx => `<tr><td class="p-3 text-slate-400 text-xs">${tx.date}</td><td class="p-3"><code>${tx.uid}</code></td><td class="p-3 text-sm">${tx.action}</td><td class="p-3 text-green-400 font-bold">+${tx.amount}₽</td></tr>`).join('');
+
+                if(globalData.settings) {
+                    let sf = document.getElementById('settings-form');
+                    sf.start_text.value = globalData.settings.start_text || '';
+                    sf.img_start.value = globalData.settings.start_image || '';
+                    sf.img_profile.value = globalData.settings.profile_image || '';
+                    sf.img_tariffs.value = globalData.settings.tariffs_image || '';
+                    sf.img_partner.value = globalData.settings.partner_image || '';
+                    sf.proxy_link.value = globalData.settings.proxy_link || '';
+                }
+
+                renderUsers(); renderFinance(); renderPartners(); renderBindings();
+            } catch(e) { console.error("Ошибка загрузки данных", e); }
+        }
+
+        /* --- Вспомогательные функции рендера и UI --- */
         function switchTab(t) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('bg-blue-600', 'shadow-lg', 'shadow-blue-500/30', 'active-tab'); el.classList.add('bg-slate-700'); });
@@ -244,11 +346,8 @@
             document.getElementById('mp-lvl1').value = p.ref_lvl1_pct;
             document.getElementById('mp-lvl2').value = p.ref_lvl2_pct;
 
-            let w_html = p.withdrawals.length ? p.withdrawals.map(w => `<div class="flex justify-between border-b border-slate-800 py-1"><span>${w.date}</span><span>${w.amount}₽</span><span class="text-xs text-slate-400">${w.status}</span></div>`).join('') : '<span class="text-slate-500">Нет выплат</span>';
-            document.getElementById('mp-withdrawals').innerHTML = w_html;
-
-            let r_html = p.invited_list.length ? p.invited_list.map(r => `<div class="flex justify-between border-b border-slate-800 py-1"><span>@${r.name}</span><code class="text-xs text-slate-400">${r.id}</code></div>`).join('') : '<span class="text-slate-500">Пока никого не пригласил</span>';
-            document.getElementById('mp-referrals').innerHTML = r_html;
+            document.getElementById('mp-withdrawals').innerHTML = p.withdrawals.length ? p.withdrawals.map(w => `<div class="flex justify-between border-b border-slate-800 py-1"><span>${w.date}</span><span>${w.amount}₽</span><span class="text-xs text-slate-400">${w.status}</span></div>`).join('') : '<span class="text-slate-500">Нет выплат</span>';
+            document.getElementById('mp-referrals').innerHTML = p.invited_list.length ? p.invited_list.map(r => `<div class="flex justify-between border-b border-slate-800 py-1"><span>@${r.name}</span><code class="text-xs text-slate-400">${r.id}</code></div>`).join('') : '<span class="text-slate-500">Пока никого не пригласил</span>';
 
             document.getElementById('partnerModal').classList.add('active');
         }
@@ -260,55 +359,6 @@
             if(val) apiCall(action, currentUserId, action === 'custom_days' ? {days: val} : {amount: val});
         }
 
-        async function apiCall(action, id = 0, payload = {}) {
-            let res = await fetch(`/admin/api/action/${id}/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            let data = await res.json();
-            if(data.status === 'ok') {
-                if(data.msg) alert(data.msg);
-                if(data.stats) alert(`📊 ТРАФИК:\n⬇️ Скачано: ${data.stats.down_gb} ГБ\n⬆️ Отправлено: ${data.stats.up_gb} ГБ\n🌐 Всего: ${data.stats.total_gb} ГБ\n\n👁 ОНЛАЙН СЕССИИ (IP):\n${data.stats.ips.join('\n') || 'Нет активных сессий'}`);
-                loadData(); // Перезагружаем сразу
-                closeModal('userModal'); closeModal('partnerModal');
-            } else alert("Ошибка: " + data.error);
-        }
-
-        async function loadData() {
-            try {
-                let res = await fetch('/admin/api/data');
-                if(res.status === 401) return;
-                globalData = await res.json();
-
-                document.getElementById('stat-earned').innerText = globalData.analytics.total_earned + " ₽";
-                document.getElementById('stat-started').innerText = globalData.analytics.funnel.started;
-                document.getElementById('stat-tested').innerText = globalData.analytics.funnel.tested;
-                document.getElementById('stat-paid').innerText = globalData.analytics.funnel.paid;
-
-                // Рендер серверов с кнопкой Рестарт
-                document.getElementById('server-stats').innerHTML = globalData.servers.map(s => `
-                    <div class="bg-slate-800 p-4 rounded-xl flex justify-between items-center shadow border border-slate-700">
-                        <div>
-                            <span class="text-2xl mr-2">${s.flag}</span> <b class="text-lg">${s.name}</b> <span class="text-xs text-slate-400">(${s.ip})</span><br>
-                            <span class="${s.active?'text-green-400':'text-red-400'} font-bold text-xs uppercase tracking-widest">${s.active?'🟢 Онлайн':'🔴 Оффлайн'}</span>
-                        </div>
-                        <button onclick="if(confirm('Рестартнуть ядро XRay на сервере ${s.name}? Это сбросит лаги и активные сессии.')) apiCall('restart_node', ${s.id})" class="bg-red-600/20 text-red-400 border border-red-600/50 px-4 py-2 rounded-lg font-bold hover:bg-red-600 hover:text-white transition"><i class="fa-solid fa-power-off"></i> Рестарт</button>
-                    </div>
-                `).join('');
-
-                document.getElementById('tx-table').innerHTML = globalData.analytics.transactions.map(tx => `<tr><td class="p-3 text-slate-400 text-xs">${tx.date}</td><td class="p-3"><code>${tx.uid}</code></td><td class="p-3 text-sm">${tx.action}</td><td class="p-3 text-green-400 font-bold">+${tx.amount}₽</td></tr>`).join('');
-
-                if(globalData.settings) {
-                    let sf = document.getElementById('settings-form');
-                    sf.start_text.value = globalData.settings.start_text;
-                    sf.img_start.value = globalData.settings.start_image;
-                    sf.img_profile.value = globalData.settings.profile_image;
-                    sf.img_tariffs.value = globalData.settings.tariffs_image;
-                    sf.img_partner.value = globalData.settings.partner_image;
-                    sf.proxy_link.value = globalData.settings.proxy_link;
-                }
-
-                renderUsers(); renderFinance(); renderPartners();
-            } catch(e) { console.error("Ошибка обновления"); }
-        }
-
         function renderUsers() {
             let q = document.getElementById('user-search').value.toLowerCase();
             document.getElementById('users-table').innerHTML = globalData.users.filter(u => String(u.id).includes(q) || String(u.username).toLowerCase().includes(q)).map(u =>
@@ -318,6 +368,23 @@
                     <td class="p-4 text-right"><button onclick="openUserModal(${u.id})" class="bg-blue-600/20 text-blue-400 border border-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-600 hover:text-white transition"><i class="fa-solid fa-gear"></i> Настроить</button></td>
                 </tr>`
             ).join('');
+        }
+
+        function renderBindings() {
+            let boundUsers = globalData.users.filter(u => u.has_payment_method);
+            if(boundUsers.length === 0) {
+                document.getElementById('bindings-table').innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-500">Нет активных привязок (рекуррентов)</td></tr>`;
+                return;
+            }
+            document.getElementById('bindings-table').innerHTML = boundUsers.map(u => {
+                let method = u.card_last4 || "СБП/SberPay";
+                if(method.startsWith("*")) method = "Карта " + method;
+                return `<tr class="hover:bg-slate-800/50 transition">
+                    <td class="p-4 font-medium"><code>${u.id}</code><br><span class="text-xs text-blue-400">@${u.username}</span></td>
+                    <td class="p-4 font-mono text-yellow-400">${method}</td>
+                    <td class="p-4 font-bold text-green-400">${u.sub_end}</td>
+                </tr>`;
+            }).join('');
         }
 
         function renderFinance() {
@@ -345,7 +412,7 @@
         }
 
         window.onload = loadData;
-        setInterval(loadData, 10000); // Автообновление каждые 10 секунд!
+        setInterval(loadData, 10000);
     </script>
 </body>
 </html>

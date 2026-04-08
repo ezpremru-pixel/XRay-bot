@@ -17,8 +17,11 @@ class User(Base):
     vless_profile_id = Column(String)
     vless_profile_data = Column(String)
     is_admin = Column(Boolean, default=False)
-    
-    # Система уведомлений и дожима
+
+    # Автоплатежи (ЮKassa)
+    payment_method_id = Column(String, nullable=True)
+    card_last4 = Column(String, nullable=True)
+
     notified_level = Column(Integer, default=0)
     last_reminder = Column(DateTime, nullable=True)
     took_test = Column(Boolean, default=False)
@@ -96,7 +99,12 @@ async def init_db():
         except: pass
         try: conn.execute(text("ALTER TABLE bot_settings ADD COLUMN proxy_link VARCHAR"))
         except: pass
-    
+        # Новые поля для рекуррентов
+        try: conn.execute(text("ALTER TABLE users ADD COLUMN payment_method_id VARCHAR"))
+        except: pass
+        try: conn.execute(text("ALTER TABLE users ADD COLUMN card_last4 VARCHAR"))
+        except: pass
+
     with Session() as session:
         if not session.query(BotSettings).first():
             session.add(BotSettings())
