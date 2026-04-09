@@ -585,6 +585,7 @@ async def api_action(request):
                 elif act == "unlink_card": # <--- ВОТ НАШ НОВЫЙ БЛОК
                     u.payment_method_id = None
                     u.card_last4 = None
+					session.commit()
                     try:
                         if bot: await bot.send_message(u.telegram_id, "ℹ️ Администратор принудительно отвязал вашу карту/СБП. Автопродление отключено.")
                     except: pass
