@@ -30,7 +30,6 @@ class AdminState(StatesGroup):
 router = Router()
 
 TARIFFS = {
-    "test1m": {"name": "🧪 ТЕСТ 1 МЕСЯЦ", "price": 1},
     "1m": {"name": "💎 1 МЕСЯЦ", "price": 149},
     "2m": {"name": "💎 2 МЕСЯЦА", "price": 269},
     "3m": {"name": "💎 3 МЕСЯЦА", "price": 369},
@@ -86,9 +85,9 @@ async def cmd_start(m: Message, bot: Bot):
         start_text = settings.start_text if settings and settings.start_text else default_start_text
         start_image = settings.start_image if settings else None
 
-    if start_image: 
+    if start_image:
         await m.answer_photo(photo=start_image, caption=start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
-    else: 
+    else:
         await m.answer(start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
 
 @router.message(F.text == "⚙️ АДМИН ПАНЕЛЬ")
@@ -337,7 +336,7 @@ async def process_pay(c: CallbackQuery):
     is_device = c.data.startswith("buydev_")
     t_key = c.data.replace("buydev_", "") if is_device else c.data.replace("buy_", "")
     tariff = DEVICE_TARIFFS[t_key] if is_device else TARIFFS[t_key]
-    
+
     # Это для сообщения в боте
     item_desc = f"Доп. Устройство {tariff['name']}" if is_device else f"VPN {tariff['name']}"
     # А это пойдет в Юкассу и в чек

@@ -710,7 +710,6 @@ async def yookassa_webhook(request):
                         else:
                             days = 30
                             if tariff_key == 'test': days = 1
-                            elif tariff_key == 'test1m': days = 30
                             elif tariff_key == '2m': days = 60
                             elif tariff_key == '3m': days = 90
                             elif tariff_key == '6m': days = 180
