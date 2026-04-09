@@ -74,11 +74,22 @@ async def cmd_start(m: Message, bot: Bot):
 
     with Session() as session:
         settings = session.query(BotSettings).first()
-        start_text = settings.start_text if settings else "✨ <b>VOROTA VPN</b>\nТвой личный ключ к свободному интернету."
+        # Измененный стартовый текст VOROTA GUARD
+        default_start_text = (
+            "⛩ <b>VOROTA GUARD</b> ⛩\n\n"
+            "🚀 Высокая скорость\n"
+            "🛡 Надежность\n"
+            "🌍 Стриминг в 4K\n"
+            "📱 Технология VLESS XTLS\n\n"
+            "👇 Готов попробовать? Нажми кнопку \"<b>🎁 ТЕСТ 24ч</b>\" и лично убедись в качестве!"
+        )
+        start_text = settings.start_text if settings and settings.start_text else default_start_text
         start_image = settings.start_image if settings else None
 
-    if start_image: await m.answer_photo(photo=start_image, caption=start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
-    else: await m.answer(start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
+    if start_image: 
+        await m.answer_photo(photo=start_image, caption=start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
+    else: 
+        await m.answer(start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
 
 @router.message(F.text == "⚙️ АДМИН ПАНЕЛЬ")
 async def admin_panel_menu(m: Message):
@@ -162,15 +173,15 @@ async def partner_menu(m: Message, bot: Bot):
         f"💸 <i>(Вывод от 500 ₽ на любую банковскую карту или СБП)</i>\n"
         f"—————————————————————\n"
         f"🔗 <b>ВАШИ ССЫЛКИ ДЛЯ ПРИГЛАШЕНИЯ:</b>\n\n"
-        f"🤖 <b>Бот:</b> <code>{ref_link}</code>\n"
-        f"🌐 <b>Сайт:</b> <code>{web_ref_link}</code>\n"
-        f"🛡 <b>Прокси:</b> <code>{proxy_link}</code>\n\n"
+        f"🤖 <b>Бот:</b>\n<code>{ref_link}</code>\n\n"
+        f"🌐 <b>Сайт:</b>\n<code>{web_ref_link}</code>\n\n"
+        f"🎁 Друг, купивший VPN по вашей ссылке, получит +7 дней подписки в подарок на 1-ю покупку!\n\n"
         f"👇 Жмите на кнопки ниже, чтобы поделиться готовым текстом с друзьями!"
     )
 
-    share_bot_text = quote("🤖 Привет! Нашел VPN без блокировок, ютуб и инста летают. Забирай бесплатный тест 24ч!")
-    share_web_text = quote("🌐 Привет! Вот сайт классного VPN, там есть бесплатный тест и прокси для разблокировки Telegram.")
-    share_proxy_text = quote("🛡 Привет! Держи рабочий Proxy для Telegram, чтобы всё грузилось без VPN.")
+    share_bot_text = quote(f"🤖 Привет! Ютуб и инста летают. Забирай бесплатный тест на 24ч!\nПерейти: {ref_link}")
+    share_web_text = quote(f"🌐 Привет! Вот сайт, там есть бесплатный тест и прокси, чтобы Telegram ожил.\nПерейти: {web_ref_link}")
+    share_proxy_text = quote(f"🛡 Привет! Держи рабочий Proxy для Telegram, чтобы всё грузилось.\nПодключить: {proxy_link}")
 
     b = InlineKeyboardBuilder()
     b.row(InlineKeyboardButton(text="📢 Поделиться Ботом", url=f"https://t.me/share/url?url={quote(ref_link)}&text={share_bot_text}"))
@@ -247,7 +258,7 @@ async def profile(m: Message):
         if method_str.startswith("*"):
             method_str = f"Карта {method_str}"
         card_info = f"\n\n🔄 <b>Автопродление:</b> Включено ({method_str})\n<i>(Списание происходит автоматически)</i>"
-        
+
     b.row(InlineKeyboardButton(text="❌ Отменить подписку", callback_data="delete_card"))
 
     text = f"👤 <b>ВАШ ПРОФИЛЬ</b>\n━━━━━━━━━━━━━━━━━━\n🆔 ID: <code>{m.from_user.id}</code>\n📅 Подписка до: <b>{d}</b>\n\n📱 <b>Устройства (Лимит): {u.device_limit}</b>{card_info}"
@@ -326,16 +337,20 @@ async def process_pay(c: CallbackQuery):
     is_device = c.data.startswith("buydev_")
     t_key = c.data.replace("buydev_", "") if is_device else c.data.replace("buy_", "")
     tariff = DEVICE_TARIFFS[t_key] if is_device else TARIFFS[t_key]
+    
+    # Это для сообщения в боте
     item_desc = f"Доп. Устройство {tariff['name']}" if is_device else f"VPN {tariff['name']}"
+    # А это пойдет в Юкассу и в чек
+    yookassa_desc = f"Платеж {c.from_user.id}"
 
     try:
-        save_method = False if is_device else True 
+        save_method = False if is_device else True
 
         p = Payment.create({
             "amount": {"value": str(tariff['price']), "currency": "RUB"},
             "confirmation": {"type": "redirect", "return_url": f"https://t.me/{(await c.bot.get_me()).username}"},
             "capture": True,
-            "description": item_desc,
+            "description": yookassa_desc,
             "save_payment_method": save_method,
             "metadata": {"user_id": c.from_user.id, "tariff": t_key, "type": "device" if is_device else "sub"},
             "receipt": {
@@ -344,7 +359,7 @@ async def process_pay(c: CallbackQuery):
                 },
                 "items": [
                     {
-                        "description": item_desc,
+                        "description": yookassa_desc,
                         "amount": {
                             "value": str(tariff['price']),
                             "currency": "RUB"

@@ -108,10 +108,10 @@ async def get_subscription(request):
                                     server_success = True
                 except: pass
 
-                if not server_success:
+                if not server_success: 
                     links.append(f"vless://00000000-0000-0000-0000-000000000000@1.1.1.1:80?type=tcp&security=none#❌_Сбой_{safe_name}")
 
-            if not links:
+            if not links: 
                 links.append("vless://00000000-0000-0000-0000-000000000000@1.1.1.1:80?type=tcp&security=none#❌_НЕТ_СЕРВЕРОВ")
 
         sub_content = "\n".join(links)
@@ -422,17 +422,13 @@ async def api_get_data(request):
                 is_active = u.subscription_end and u.subscription_end > datetime.now()
                 if is_active: active_count += 1
 
-                # Считаем общую сумму пополнений пользователя
-                user_total_spent = session.query(func.sum(PaymentHistory.amount)).filter(PaymentHistory.telegram_id == u.telegram_id).scalar() or 0
-
                 u_data.append({
                     "id": u.telegram_id, "username": u.username or "N/A", "full_name": u.full_name or "",
                     "sub_end": u.subscription_end.strftime('%d.%m.%Y %H:%M') if is_active else 'Истекла',
                     "limit": u.device_limit, "balance": round(u.balance, 2), "refs": u.referral_count,
                     "is_banned": u.is_banned,
                     "has_payment_method": bool(u.payment_method_id),
-                    "card_last4": u.card_last4,
-                    "total_spent": round(user_total_spent, 2) # <-- Добавили это поле
+                    "card_last4": u.card_last4
                 })
 
                 if u.referral_count > 0 or u.balance > 0 or u.earned_lvl1 > 0:
@@ -582,13 +578,6 @@ async def api_action(request):
                     try:
                         if bot: await bot.send_message(u.telegram_id, f"🎁 <b>Администратор обновил вашу подписку!</b>\nТеперь она доступна до {u.subscription_end.strftime('%d.%m.%Y')}", parse_mode='HTML')
                     except: pass
-                elif act == "unlink_card": # <--- ВОТ НАШ НОВЫЙ БЛОК
-                    u.payment_method_id = None
-                    u.card_last4 = None
-                    try:
-                        if bot: await bot.send_message(u.telegram_id, "ℹ️ Администратор принудительно отвязал вашу карту/СБП. Автопродление отключено.")
-                    except: pass
-                    return web.json_response({"status": "ok", "msg": "Карта успешно отвязана!"})
                 elif act == "edit_balance":
                     amount = float(payload.get('amount', 0))
                     u.balance += amount
@@ -743,11 +732,11 @@ async def yookassa_webhook(request):
 
 def setup_webhook(app, bot):
     app['bot'] = bot
-
+    
     # Роуты для админки (учитываем слэши Nginx)
     app.router.add_get('/admin', admin_dashboard)
     app.router.add_get('/admin/', admin_dashboard)
-
+    
     # Роуты для подписок
     app.router.add_get('/sub/proxy', proxy_redirect)
     app.router.add_get('/sub/proxy/', proxy_redirect)
@@ -757,15 +746,15 @@ def setup_webhook(app, bot):
     # Дополнительные API роуты
     app.router.add_get('/admin/api/data', api_get_data)
     app.router.add_get('/adminapi/data', api_get_data)
-
+    
     app.router.add_get('/admin/api/request_2fa', request_2fa)
     app.router.add_get('/adminapi/request_2fa', request_2fa)
-
+    
     app.router.add_post('/admin/api/verify_2fa', verify_2fa)
     app.router.add_post('/adminapi/verify_2fa', verify_2fa)
-
+    
     app.router.add_post('/admin/api/action/{user_id}/{action}', api_action)
     app.router.add_post('/adminapi/action/{user_id}/{action}', api_action)
-
+    
     app.router.add_post('/webhook', yookassa_webhook)
     app.router.add_post('/webhook/', yookassa_webhook)

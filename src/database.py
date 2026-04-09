@@ -83,7 +83,7 @@ class BotSettings(Base):
     partner_image = Column(String, default="https://dummyimage.com/800x400/1a1a1a/ffffff&text=PARTNERS")
     proxy_link = Column(String, default="https://t.me/proxy?server=prx.enotfast.net&port=443&secret=eea705ab7e6a662eee8dc1f82b59c93f8f7275747562652e7275")
 
-engine = create_engine('sqlite:///users.db', echo=False)
+engine = create_engine('sqlite:////root/XRay-bot/users.db', echo=False)
 Session = sessionmaker(bind=engine)
 
 async def init_db():
