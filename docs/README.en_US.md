@@ -1,18 +1,18 @@
 **Язык / Language:** [Русский](../README.md) **|** <ins>English</ins>
 
-<div id="header" align="center"><h1>XRay VPN Bot [Telegram]</h1></div>
+<div id="header" align="center"><h1>XRay GUARD Bot [Telegram]</h1></div>
 
 <div id="header" align="center"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/QueenDekim/XRay-bot"> <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/QueenDekim/XRay-bot"><br><img alt="GitHub top language" src="https://img.shields.io/github/languages/top/QueenDekim/XRay-bot"> <a href="./LICENSE" target="_blank"><img alt="GitHub License" src="https://img.shields.io/github/license/QueenDekim/XRay-bot"></a></div>
 
 ## Project Description
 
-This project is a Telegram bot for selling and managing VPN subscriptions via the 3X-UI control panel. The bot allows users to purchase VPN subscriptions, create and manage their profiles, and enables administrators to manage users and track statistics.
+This project is a Telegram bot for selling and managing GUARD subscriptions via the 3X-UI control panel. The bot allows users to purchase GUARD subscriptions, create and manage their profiles, and enables administrators to manage users and track statistics.
 
 Key Features:
 
 - User registration with a trial period
 - Subscription renewal via Telegram's built-in payment system
-- Creation and deletion of VPN profiles (VLESS) in the 3X-UI panel
+- Creation and deletion of GUARD profiles (VLESS) in the 3X-UI panel
 - Subscription expiration notifications
 - Administrative menu for user management and broadcast messages
 - Traffic usage statistics
@@ -96,9 +96,9 @@ The project uses `SQLite` with `SQLAlchemy ORM`. Main tables:
 1.  **`users`** - User information:
     - `telegram_id` - User's Telegram ID
     - `subscription_end` - Subscription end date
-    - `vless_profile_data` - VPN profile data in JSON
+    - `vless_profile_data` - GUARD profile data in JSON
     - `is_admin` - Administrator flag
-2.  **`static_profiles`** - Static VPN profiles:
+2.  **`static_profiles`** - Static GUARD profiles:
     - `name` - Profile name
     - `vless_url` - VLESS URL
 
@@ -214,5 +214,5 @@ The bot automatically checks subscriptions every hour and:
 
 | Demo - Fully functional bot                            | Communication with the developer                 |
 | ------------------------------------------------------ | ------------------------------------------------ |
-| Telegram: [@Dekim_vpn_bot](https://t.me/Dekim_vpn_bot) | Telegram: [@QueenDek1m](https://t.me/QueenDek1m) |
+| Telegram: [@Dekim_guard_bot](https://t.me/Dekim_guard_bot) | Telegram: [@QueenDek1m](https://t.me/QueenDek1m) |
 |                                                        | Discord: `from_russia_with_love`                 |

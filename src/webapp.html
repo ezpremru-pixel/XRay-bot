@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VOROTA GUARD</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background-color: var(--tg-theme-bg-color, #0f172a); 
+            color: var(--tg-theme-text-color, #f8fafc); 
+            font-family: sans-serif; 
+            margin: 0;
+            padding: 0;
+            overflow-y: scroll; 
+            -webkit-overflow-scrolling: touch;
+        }
+        .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-item.active { color: #3b82f6; }
+        .content-wrapper { padding-bottom: 140px; padding-left: 16px; padding-right: 16px; padding-top: 16px; } 
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="content-wrapper">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400 tracking-tight">⛩ VOROTA GUARD ⛩</h1>
+            <div id="user-avatar" class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-bold shadow-lg border border-slate-600">👤</div>
+        </div>
+
+        <div id="tab-profile" class="tab-content active">
+            <div class="glass rounded-3xl p-6 mb-4 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/20 blur-3xl rounded-full"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-sm text-slate-400 mb-1">Статус подписки</p>
+                        <h2 id="sub-status" class="text-2xl font-bold text-emerald-400">Загрузка...</h2>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500">Ваш ID</p>
+                        <p id="user-id" class="text-sm font-mono text-slate-300">...</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center bg-slate-900/50 p-4 rounded-2xl mb-4">
+                    <div>
+                        <p class="text-xs text-slate-400">Лимит устройств</p>
+                        <p id="sub-limit" class="font-bold text-lg">...</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 text-right">Автопродление</p>
+                        <p id="sub-renew" class="font-bold text-sm text-blue-400 text-right">...</p>
+                    </div>
+                </div>
+
+                <button onclick="sendMsg('ИНСТРУКЦИЯ')" class="w-full bg-emerald-600 py-3 rounded-xl font-bold text-white shadow-lg shadow-emerald-600/20 mb-3 hover:bg-emerald-500 transition">
+                    <i class="fa-solid fa-book-open mr-2"></i> Инструкция (По ОС)
+                </button>
+            </div>
+
+            <h3 class="text-lg font-bold mb-3">Управление</h3>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="switchTab('tariffs')" class="glass p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-mobile-screen-button text-2xl text-blue-400"></i>
+                    <span class="text-xs font-bold text-center">Докупить<br>устройства</span>
+                </button>
+                <button onclick="sendMsg('Сброс устройств')" class="glass p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-rotate-right text-2xl text-orange-400"></i>
+                    <span class="text-xs font-bold text-center">Сброс<br>устройств</span>
+                </button>
+                <button onclick="sendMsg('ПРОКСИ')" class="glass p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-slate-800 transition col-span-2 border-blue-500/30">
+                    <i class="fa-solid fa-globe text-2xl text-blue-400"></i>
+                    <span class="text-sm font-bold">Бесплатный Прокси</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="tab-tariffs" class="tab-content">
+            <h2 class="text-xl font-bold mb-4">Тарифы VPN</h2>
+            <div id="tariffs-list" class="flex flex-col gap-3 mb-8">
+                </div>
+        </div>
+
+        <div id="tab-partner" class="tab-content">
+            <div class="glass rounded-3xl p-6 mb-4 text-center relative overflow-hidden border border-emerald-500/20">
+                <div class="absolute -left-10 -top-10 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full"></div>
+                <p class="text-sm text-slate-400 mb-1">Доступно к выводу</p>
+                <h2 id="partner-balance" class="text-4xl font-black text-emerald-400 mb-4">0.00 ₽</h2>
+                <button onclick="sendMsg('Вывод средств')" class="w-full bg-emerald-600 py-3 rounded-xl font-bold text-white mb-4 hover:bg-emerald-500">Вывести средства</button>
+                
+                <div class="grid grid-cols-2 gap-2 border-t border-slate-700/50 pt-4 mt-2">
+                    <div><p class="text-[10px] text-slate-500 uppercase tracking-wider">Заработано всего</p><p id="partner-earned" class="font-bold text-sm text-white">0.00 ₽</p></div>
+                    <div><p class="text-[10px] text-slate-500 uppercase tracking-wider">Рефералы (1/2)</p><p id="partner-refs-split" class="font-bold text-sm text-white">0 / 0</p></div>
+                </div>
+            </div>
+            <h3 class="text-lg font-bold mb-3">Ваши ссылки</h3>
+            <div id="links-container" class="flex flex-col gap-3"></div>
+        </div>
+
+        <div id="tab-support" class="tab-content">
+            <div class="glass rounded-3xl p-6 text-center border border-blue-500/20">
+                <i class="fa-solid fa-headset text-4xl text-blue-400 mb-4"></i>
+                <h2 class="text-xl font-bold mb-2">Нужна помощь?</h2>
+                <p class="text-sm text-slate-400 mb-6">Напишите в поддержку, и мы ответим в чате бота.</p>
+                <button onclick="sendMsg('🆘 ПОДДЕРЖКА')" class="w-full bg-blue-600 py-4 rounded-xl font-bold text-white hover:bg-blue-500">Написать в Поддержку</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 glass border-t border-slate-700 pb-8 pt-2 px-2 flex justify-between items-center z-50">
+        <button onclick="switchTab('profile')" id="nav-profile" class="nav-item active flex-1 flex flex-col items-center gap-1 p-2 transition">
+            <i class="fa-solid fa-user text-xl"></i><span class="text-[10px] font-bold">Профиль</span>
+        </button>
+        <button onclick="switchTab('tariffs')" id="nav-tariffs" class="nav-item flex-1 flex flex-col items-center gap-1 p-2 transition">
+            <i class="fa-solid fa-credit-card text-xl"></i><span class="text-[10px] font-bold">Тарифы</span>
+        </button>
+        <button onclick="switchTab('partner')" id="nav-partner" class="nav-item flex-1 flex flex-col items-center gap-1 p-2 transition">
+            <i class="fa-solid fa-handshake text-xl"></i><span class="text-[10px] font-bold">Партнерка</span>
+        </button>
+        <button onclick="switchTab('support')" id="nav-support" class="nav-item flex-1 flex flex-col items-center gap-1 p-2 transition">
+            <i class="fa-solid fa-headset text-xl"></i><span class="text-[10px] font-bold">Саппорт</span>
+        </button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            document.getElementById('nav-' + tabName).classList.add('active');
+            tg.HapticFeedback.selectionChanged();
+            window.scrollTo(0, 0);
+        }
+
+        // Функция отправки команды в бота
+        function sendMsg(text) {
+            tg.HapticFeedback.impactOccurred('medium');
+            tg.sendData(text); // Отправляет данные боту и закрывает WebApp (если настроено)
+            tg.close();
+        }
+
+        function copyText(val) {
+            navigator.clipboard.writeText(val);
+            tg.HapticFeedback.notificationOccurred('success');
+            tg.showAlert('Скопировано!');
+        }
+
+        async function loadData() {
+            const user = tg.initDataUnsafe?.user;
+            if(!user) return;
+            document.getElementById('user-avatar').innerText = user.first_name.charAt(0).toUpperCase();
+            
+            try {
+                const res = await fetch(`/sub/api/data?tg_id=${user.id}`);
+                const data = await res.json();
+                
+                if(!data.error) {
+                    document.getElementById('user-id').innerText = data.id;
+                    document.getElementById('sub-status').innerText = data.is_active ? data.sub_end : 'Истекла';
+                    document.getElementById('sub-status').className = data.is_active ? 'text-2xl font-bold text-emerald-400' : 'text-2xl font-bold text-red-400';
+                    document.getElementById('sub-limit').innerText = data.device_limit + ' шт.';
+                    document.getElementById('sub-renew').innerText = data.auto_renew;
+                    document.getElementById('partner-balance').innerText = data.balance + ' ₽';
+                    document.getElementById('partner-earned').innerText = data.earned + ' ₽';
+                    document.getElementById('partner-refs-split').innerText = `${data.refs_1} / ${data.refs_2}`;
+
+                    // Динамическая отрисовка ссылок
+                    const botLink = `https://t.me/${data.bot_username}?start=ref_${data.id}`;
+                    const webLink = `https://vorota-app.ru/?ref=${data.id}`;
+                    document.getElementById('links-container').innerHTML = `
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 flex justify-between items-center" onclick="copyText('${botLink}')">
+                            <div class="overflow-hidden"><p class="text-[10px] text-blue-400 font-bold uppercase">Бот</p><p class="text-xs truncate text-slate-300">${botLink}</p></div>
+                            <i class="fa-regular fa-copy text-slate-500"></i>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 flex justify-between items-center" onclick="copyText('${webLink}')">
+                            <div class="overflow-hidden"><p class="text-[10px] text-blue-400 font-bold uppercase">Сайт</p><p class="text-xs truncate text-slate-300">${webLink}</p></div>
+                            <i class="fa-regular fa-copy text-slate-500"></i>
+                        </div>
+                    `;
+
+                    // Отрисовка тарифов
+                    const tariffs = [
+                        {k:'1m', n:'1 Месяц', p:149}, {k:'2m', n:'2 Месяца', p:269}, 
+                        {k:'3m', n:'3 Месяца (ХИТ)', p:369}, {k:'6m', n:'6 Месяцев', p:649}, 
+                        {k:'12m', n:'12 Месяцев', p:1149}
+                    ];
+                    document.getElementById('tariffs-list').innerHTML = tariffs.map(t => `
+                        <div class="glass p-4 rounded-2xl flex justify-between items-center border border-slate-700" onclick="sendMsg('💳 ТАРИФЫ')">
+                            <div><h3 class="font-bold">${t.n}</h3><p class="text-sm text-blue-400">${t.p} ₽</p></div>
+                            <button class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-xs">Выбрать</button>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) { console.error(e); }
+        }
+        loadData();
+    </script>
+</body>
+</html>

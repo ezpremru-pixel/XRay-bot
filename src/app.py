@@ -131,95 +131,86 @@ async def check_subscriptions(bot: Bot):
             with Session() as session:
                 users = session.query(User).filter_by(is_banned=False).all()
                 for user in users:
-                    
-                    # 1. Если нет подписки вообще (даже теста не брал)
+                    # 1. Если нет подписки
                     if not user.subscription_end:
-                        if not user.last_reminder or (now - user.last_reminder) > timedelta(hours=24):
+                        if not user.last_reminder or (now - user.last_reminder).total_seconds() > 86400:
                             try:
-                                if not user.took_test: 
+                                if not user.took_test:
                                     await bot.send_message(user.telegram_id, "👋 <b>Вы еще не пробовали наш VPN?</b>\n\nВам доступен бесплатный тест на 24 часа! Зайдите в меню и нажмите «🎁 ТЕСТ 24ч».", parse_mode='HTML')
                                     user.last_reminder = now
                             except: pass
                         continue
 
                     delta = user.subscription_end - now
-
-                    # 2. Уведомления ДО окончания подписки (только для теста)
                     is_test = user.took_test and (session.query(PaymentHistory).filter_by(telegram_id=user.telegram_id).count() == 0)
-                    
-                    if delta > timedelta(0): # Подписка еще активна
+
+                    # 2. Подписка еще активна
+                    if delta.total_seconds() > 0:
                         if is_test:
-                            # Напоминание через 12 часов (осталось 11-12 часов)
-                            if timedelta(hours=11) < delta <= timedelta(hours=12) and user.notified_level < 1:
+                            if 39600 < delta.total_seconds() <= 43200 and user.notified_level < 1:
                                 try:
                                     await bot.send_message(user.telegram_id, "🚀 <b>Ну как вам скорость?</b>\n\nYouTube и Инста летают? Если есть вопросы — пишите в поддержку!", parse_mode='HTML')
                                     user.notified_level = 1
                                 except: pass
-                            # Напоминание за 2 часа до конца
-                            elif timedelta(hours=1) < delta <= timedelta(hours=2) and user.notified_level < 2:
+                            elif 3600 < delta.total_seconds() <= 7200 and user.notified_level < 2:
                                 try:
                                     await bot.send_message(user.telegram_id, "⚠️ <b>Тест заканчивается через 2 часа!</b>\n\nПродлите подписку в разделе 💳 ТАРИФЫ, чтобы интернет оставался свободным.", parse_mode='HTML')
                                     user.notified_level = 2
                                 except: pass
-                        continue # Идем к следующему юзеру (подписка активна, больше ничего не делаем)
+                        continue
 
-                    # 3. ПОДПИСКА ЗАКОНЧИЛАСЬ (delta <= 0)
-                    expired_days = (now - user.subscription_end).days
+                    # 3. ПОДПИСКА ЗАКОНЧИЛАСЬ (Считаем точные секунды)
+                    expired_seconds = abs(delta.total_seconds())
+                    expired_days = expired_seconds / 86400
 
-                    # Удаляем с серверов, если еще не удален
-                    if user.notified_level != 99:
-                        await delete_client_by_email(str(user.telegram_id))
-                        user.notified_level = 99
-                        try: 
-                            await bot.send_message(user.telegram_id, "❌ <b>Подписка закончилась!</b>\nДоступ к VPN закрыт. Продлите подписку в меню 💳 ТАРИФЫ.", parse_mode='HTML')
-                        except: pass
-
-                    # 4. АВТОПЛАТЕЖИ (Попытки: 0, 7, 14 дней. Отвязка на 21)
+                    payment_attempted_now = False
                     if user.payment_method_id:
-                        if expired_days in [0, 7, 14]:
-                            # Проверяем, не пытались ли мы уже сегодня
-                            if not user.last_reminder or (now - user.last_reminder).days > 0:
+                        if (0 <= expired_days < 1) or (7 <= expired_days < 8) or (14 <= expired_days < 15):
+                            if not user.last_reminder or (now - user.last_reminder).total_seconds() > 86400:
                                 user.last_reminder = now
+                                payment_attempted_now = True
+                                
+                                # --- ДАЕМ 1 ЧАС БЕЗ ПРЕРЫВАНИЯ СВЯЗИ НА ОБРАБОТКУ ПЛАТЕЖА ---
+                                user.subscription_end = now + timedelta(hours=1)
+                                # -------------------------------------------------------------
+
                                 try:
                                     p = Payment.create({
                                         "amount": {"value": "149.00", "currency": "RUB"},
                                         "capture": True,
                                         "payment_method_id": user.payment_method_id,
-                                        "description": f"Платеж {user.telegram_id}",
+                                        "description": f"Автопродление подписки {user.telegram_id}",
                                         "metadata": {"user_id": user.telegram_id, "tariff": "1m", "type": "sub"},
                                         "receipt": {
                                             "customer": {"email": "info@vorotavpn.ru"},
-                                            "items": [{
-                                                "description": f"Платеж {user.telegram_id}",
-                                                "amount": {"value": "149.00", "currency": "RUB"},
-                                                "vat_code": "1",
-                                                "quantity": "1.00",
-                                                "payment_subject": "service",
-                                                "payment_mode": "full_prepayment"
-                                            }]
+                                            "items": [{"description": f"VPN Подписка {user.telegram_id}", "amount": {"value": "149.00", "currency": "RUB"}, "vat_code": "1", "quantity": "1.00", "payment_subject": "service", "payment_mode": "full_prepayment"}]
                                         }
                                     }, idempotency_key=str(uuid.uuid4()))
 
                                     if p.status == 'canceled':
-                                        try: await bot.send_message(user.telegram_id, f"❌ Не удалось автоматически списать средства за VPN. Следующая попытка через 7 дней.\n\nОбновите подписку вручную в разделе 💳 ТАРИФЫ.")
+                                        try: await bot.send_message(user.telegram_id, f"❌ <b>Ошибка автопродления!</b>\n\nМы не смогли списать средства с привязанной карты. Доступ к VPN закрыт.\n\nОбновите подписку вручную в разделе 💳 ТАРИФЫ.", parse_mode='HTML')
                                         except: pass
-                                    # Если success/pending - вебхук сам начислит 30 дней и удалит notified_level
                                 except Exception as e:
                                     logger.error(f"❌ Ошибка рекуррента: {e}")
-                        
                         elif expired_days >= 21:
                             user.payment_method_id = None
                             try: await bot.send_message(user.telegram_id, "❌ Все попытки автоматического списания исчерпаны. Автопродление отключено, привязанная карта удалена.")
                             except: pass
 
-                    # 5. СПАМ НАПОМИНАНИЯ (30 дней), если нет карты или все попытки отвалились
-                    else:
-                        if expired_days <= 30:
-                            if not user.last_reminder or (now - user.last_reminder) > timedelta(hours=24):
-                                user.last_reminder = now
-                                try:
-                                    await bot.send_message(user.telegram_id, "⚠️ <b>У вас закончилась подписка!</b>\nБез неё доступ к сайтам может быть ограничен, а видео — работать медленнее. Продлите подписку в 💳 ТАРИФЫ прямо сейчас, чтобы всё снова работало стабильно.", parse_mode='HTML')
-                                except: pass
+                    # ЖЕЛЕЗНОЕ ОТКЛЮЧЕНИЕ
+                    if user.notified_level != 99:
+                        await delete_client_by_email(str(user.telegram_id))
+                        user.notified_level = 99
+                        if not payment_attempted_now:
+                            try: await bot.send_message(user.telegram_id, "❌ <b>Подписка закончилась!</b>\nДоступ к VPN закрыт. Продлите подписку в меню 💳 ТАРИФЫ.", parse_mode='HTML')
+                            except: pass
+
+                    # СПАМ НАПОМИНАНИЯ (30 дней)
+                    if expired_days <= 30 and not user.payment_method_id and user.notified_level == 99:
+                        if not user.last_reminder or (now - user.last_reminder).total_seconds() > 86400:
+                            user.last_reminder = now
+                            try: await bot.send_message(user.telegram_id, "⚠️ <b>У вас закончилась подписка!</b>\nБез неё доступ к сайтам может быть ограничен. Продлите подписку в 💳 ТАРИФЫ прямо сейчас, чтобы всё снова работало стабильно.", parse_mode='HTML')
+                            except: pass
 
                 session.commit()
         except Exception as e:

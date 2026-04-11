@@ -7,6 +7,8 @@ import logging
 import traceback
 import random
 import aiohttp
+import uuid
+from yookassa import Payment
 from dotenv import load_dotenv
 from aiohttp import web
 from datetime import datetime, timedelta
@@ -16,6 +18,7 @@ from aiogram.types import InlineKeyboardButton
 
 from database import Session, User, PaymentHistory, Withdrawal, Server, BotSettings
 import database as db_funcs
+from database import add_referral_earnings
 import functions
 from functions import get_real_server_stats, create_vless_profile, delete_client_by_email, reset_client_ips, get_user_traffic_and_ips
 
@@ -25,6 +28,7 @@ logger.setLevel(logging.DEBUG)
 ADMIN_LOGIN, ADMIN_PASS = "admin", "vorota2026"
 ADMIN_TG_ID = 8179216822
 TWO_FA_SESSIONS = {}
+PROCESSED_PAYMENTS = set()
 
 def check_auth(request):
     auth_header = request.headers.get('Authorization')
@@ -51,7 +55,6 @@ async def get_subscription(request):
         sub_url = f"https://{domain}/sub/{user_id}"
 
         with Session() as db_session:
-            # Универсальный поиск: ищем и по числу, и по строке
             u = db_session.query(User).filter(
                 (User.telegram_id == user_id) | (User.telegram_id == str(user_id))
             ).first()
@@ -65,51 +68,59 @@ async def get_subscription(request):
 
             limit = u.device_limit if u else 3
             expiry_date = u.subscription_end.strftime('%d.%m.%Y %H:%M') if u and u.subscription_end else "Истекла"
-            try: await create_vless_profile(user_id, limit)
-            except: pass
 
+            # --- НОВАЯ ЛОГИКА: МЯГКАЯ БЛОКИРОВКА (ЗАГЛУШКА) ---
+            is_expired = not u.subscription_end or u.subscription_end < datetime.now()
             links = []
-            for i, server in enumerate(functions.SERVERS):
-                fresh_url = server.get('url')
-                if not fresh_url: continue
-                if "2.27.50.25" in fresh_url: fresh_url = fresh_url.replace("http://", "https://")
-                base_url = fresh_url.rstrip('/')
-                safe_name = server.get('name', f'Server_{i}').replace(' ', '_')
-                server_success = False
 
-                try:
-                    async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True), connector=aiohttp.TCPConnector(ssl=False)) as session:
-                        pw = server.get('password', server.get('pass', ''))
-                        resp = await session.post(f"{base_url}/login", data={"username": server.get('user', 'admin'), "password": pw}, timeout=5)
-
-                        if resp.status == 200:
-                            list_resp = await session.get(f"{base_url}/panel/api/inbounds/list", timeout=5)
-                            if list_resp.status == 200:
-                                data = await list_resp.json()
-                                uuid_found = None
-                                inbound_id = server.get('inbound_id', 1)
-
-                                for inbound in data.get('obj', []):
-                                    if inbound.get('id') == inbound_id:
-                                        settings = json.loads(inbound.get('settings', '{}'))
-                                        for client in settings.get('clients', []):
-                                            if str(client.get('email')) == email_str:
-                                                uuid_found = client.get('id')
-                                                break
-                                if uuid_found:
-                                    template_str = server.get('template')
-                                    if not template_str or str(template_str).strip() in ["", "None"]:
-                                        template_str = f"vless://uuid@{server.get('ip')}:{server.get('port', 443)}?type=tcp&security=none"
-
-                                    new_link = template_str.replace('uuid', str(uuid_found))
-                                    base_link = new_link.split('#')[0] if '#' in new_link else new_link
-                                    flag = server.get('flag', '🏳️')
-                                    links.append(f"{base_link}#{flag}_{safe_name}")
-                                    server_success = True
+            if is_expired:
+                # Отдаем фейковый сервер 127.0.0.1, который никуда не подключается
+                links.append("vless://00000000-0000-0000-0000-000000000000@127.0.0.1:443?type=tcp&security=none#⚠️_ПОДПИСКА_ИСТЕКЛА_-_ПРОДЛИТЕ_В_БОТЕ")
+            else:
+                try: await create_vless_profile(user_id, limit)
                 except: pass
 
-                if not server_success:
-                    links.append(f"vless://00000000-0000-0000-0000-000000000000@1.1.1.1:80?type=tcp&security=none#❌_Сбой_{safe_name}")
+                for i, server in enumerate(functions.SERVERS):
+                    fresh_url = server.get('url')
+                    if not fresh_url: continue
+                    if "2.27.50.25" in fresh_url: fresh_url = fresh_url.replace("http://", "https://")
+                    base_url = fresh_url.rstrip('/')
+                    safe_name = server.get('name', f'Server_{i}').replace(' ', '_')
+                    server_success = False
+
+                    try:
+                        async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True), connector=aiohttp.TCPConnector(ssl=False)) as session:
+                            pw = server.get('password', server.get('pass', ''))
+                            resp = await session.post(f"{base_url}/login", data={"username": server.get('user', 'admin'), "password": pw}, timeout=5)
+
+                            if resp.status == 200:
+                                list_resp = await session.get(f"{base_url}/panel/api/inbounds/list", timeout=5)
+                                if list_resp.status == 200:
+                                    data = await list_resp.json()
+                                    uuid_found = None
+                                    inbound_id = server.get('inbound_id', 1)
+
+                                    for inbound in data.get('obj', []):
+                                        if inbound.get('id') == inbound_id:
+                                            settings = json.loads(inbound.get('settings', '{}'))
+                                            for client in settings.get('clients', []):
+                                                if str(client.get('email')) == email_str:
+                                                    uuid_found = client.get('id')
+                                                    break
+                                    if uuid_found:
+                                        template_str = server.get('template')
+                                        if not template_str or str(template_str).strip() in ["", "None"]:
+                                            template_str = f"vless://uuid@{server.get('ip')}:{server.get('port', 443)}?type=tcp&security=none"
+
+                                        new_link = template_str.replace('uuid', str(uuid_found))
+                                        base_link = new_link.split('#')[0] if '#' in new_link else new_link
+                                        flag = server.get('flag', '🏳️')
+                                        links.append(f"{base_link}#{flag}_{safe_name}")
+                                        server_success = True
+                    except: pass
+
+                    if not server_success:
+                        links.append(f"vless://00000000-0000-0000-0000-000000000000@1.1.1.1:80?type=tcp&security=none#❌_Сбой_{safe_name}")
 
             if not links:
                 links.append("vless://00000000-0000-0000-0000-000000000000@1.1.1.1:80?type=tcp&security=none#❌_НЕТ_СЕРВЕРОВ")
@@ -119,7 +130,6 @@ async def get_subscription(request):
         b64_name = base64.b64encode("⛩ VOROTA VPN ⛩".encode('utf-8')).decode('utf-8')
 
         user_agent = request.headers.get('User-Agent', '').lower()
-        # Добавлен happ, чтобы ключи скачивались корректно
         is_client = any(kw in user_agent for kw in ['v2ray', 'v2box', 'hiddify', 'streisand', 'shadowrocket', 'clash', 'surge', 'cfnetwork', 'dart', 'httpclient', 'okhttp', 'hitray', 'napsternetv', 'happ'])
         is_browser = any(kw in user_agent for kw in ['mozilla', 'chrome', 'safari', 'applewebkit', 'edge', 'opera'])
 
@@ -133,7 +143,7 @@ async def get_subscription(request):
             vless_html += f"""
             <div class="bg-slate-800 p-4 rounded-xl mb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center border border-slate-700 gap-4">
                 <div class="overflow-hidden w-full">
-                    <div class="font-bold text-blue-400 mb-1">{server_name}</div>
+                    <div class="font-bold text-blue-400 mb-1">{server_name.replace('_', ' ')}</div>
                     <div class="text-xs text-slate-500 truncate w-full">{safe_link[:60]}...</div>
                 </div>
                 <button onclick="navigator.clipboard.writeText('{safe_link}'); alert('Ключ скопирован!');" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-bold transition whitespace-nowrap w-full sm:w-auto text-white">Копировать</button>
@@ -207,6 +217,17 @@ async def get_subscription(request):
             <button onclick="showOS('tv')" class="os-btn px-4 py-2 rounded-xl border border-slate-600 font-bold hover:bg-slate-800 transition"><i class="fa-solid fa-tv mr-2"></i>TV</button>
         </div>
 
+        <div class="bg-red-500/10 border-l-4 border-red-500 p-6 rounded-r-3xl rounded-b-3xl mb-8 relative overflow-hidden">
+            <div class="absolute -right-4 -bottom-4 text-red-500/10 text-9xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h3 class="text-xl font-black text-red-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> ВАЖНО! ОТКЛЮЧИТЕ ПРОКСИ</h3>
+            <p class="text-slate-300 font-medium mb-3 relative z-10">Если вы ставили прокси для Telegram, <b>рекомендуем отключить</b> их, для корректной работы Telegram с VPN!</p>
+            <div class="bg-slate-900/50 p-4 rounded-xl border border-red-500/20 flex flex-col gap-3 relative z-10">
+                <p class="text-sm text-slate-300"><b class="text-white"><i class="fa-solid fa-desktop text-blue-400 mr-1"></i> С компьютера:</b><br>Настройки → Продвинутые настройки → Тип соединения → <b class="text-red-400">Отключить прокси</b></p>
+                <div class="h-px bg-red-500/20 w-full"></div>
+                <p class="text-sm text-slate-300"><b class="text-white"><i class="fa-solid fa-mobile-screen text-green-400 mr-1"></i> С телефона:</b><br>Настройки → Данные и память → В самом низу "Прокси" → <b class="text-red-400">Выключить тумблер</b></p>
+            </div>
+        </div>
+
         <div id="os-ios" class="os-content active">
             <div class="glass-panel p-6 rounded-3xl mb-4 border-l-4 border-l-blue-500">
                 <h3 class="font-bold text-lg mb-2 text-white">Шаг 1. Установка приложения</h3>
@@ -227,7 +248,6 @@ async def get_subscription(request):
                     <a href="hiddify://install-config?url={sub_url}&name=VOROTA_VPN" class="block w-full text-center bg-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/30">➕ Добавить в Hiddify</a>
                     <a href="v2box://install-sub?url={sub_url}&name=VOROTA_VPN" class="block w-full text-center bg-purple-600 py-3 rounded-xl font-bold hover:bg-purple-500 transition shadow-lg shadow-purple-500/30">➕ Добавить в V2Box</a>
                     <a href="happ://add/{sub_url}" class="block w-full text-center bg-green-600 py-3 rounded-xl font-bold hover:bg-green-500 transition shadow-lg shadow-green-500/30">➕ Добавить в Happ</a>
-
                     <a href="#" onclick="navigator.clipboard.writeText('{sub_url}'); alert('Ссылка скопирована! Откройте приложение Hit Proxy и вставьте её.'); return false;" class="block w-full text-center bg-blue-600 py-3 rounded-xl font-bold hover:bg-blue-500 transition shadow-lg shadow-blue-500/30">➕ Добавить в Hit Proxy</a>
                     <a href="#" onclick="navigator.clipboard.writeText('{sub_url}'); alert('Ссылка скопирована! Откройте приложение NPV Tunnel и вставьте её.'); return false;" class="block w-full text-center bg-teal-600 py-3 rounded-xl font-bold hover:bg-teal-500 transition shadow-lg shadow-teal-500/30">➕ Добавить в NPV Tunnel</a>
                     <a href="#" onclick="navigator.clipboard.writeText('{sub_url}'); alert('Ссылка скопирована! Откройте приложение Streisand и вставьте её.'); return false;" class="block w-full text-center bg-orange-600 py-3 rounded-xl font-bold hover:bg-orange-500 transition shadow-lg shadow-orange-500/30">➕ Добавить в Streisand</a>
@@ -418,11 +438,19 @@ async def api_get_data(request):
                 if w.telegram_id not in w_map: w_map[w.telegram_id] = []
                 w_map[w.telegram_id].append({"amount": w.amount, "status": w.status, "date": w.date.strftime('%d.%m %H:%M')})
 
+            # --- ДОБАВЬ ЭТОТ БЛОК ---
+            all_payments = session.query(PaymentHistory).order_by(PaymentHistory.date.desc()).all()
+            pay_map = {}
+            for p in all_payments:
+                if p.telegram_id not in pay_map: pay_map[p.telegram_id] = []
+                if len(pay_map[p.telegram_id]) < 5: # Берем последние 5 платежей
+                    pay_map[p.telegram_id].append({"date": p.date.strftime('%d.%m %H:%M'), "amount": p.amount, "action": p.action})
+            # -------------------------
+			
             for u in users:
                 is_active = u.subscription_end and u.subscription_end > datetime.now()
                 if is_active: active_count += 1
 
-                # Считаем общую сумму пополнений пользователя
                 user_total_spent = session.query(func.sum(PaymentHistory.amount)).filter(PaymentHistory.telegram_id == u.telegram_id).scalar() or 0
 
                 u_data.append({
@@ -432,7 +460,8 @@ async def api_get_data(request):
                     "is_banned": u.is_banned,
                     "has_payment_method": bool(u.payment_method_id),
                     "card_last4": u.card_last4,
-                    "total_spent": round(user_total_spent, 2) # <-- Добавили это поле
+                    "total_spent": round(user_total_spent, 2),
+                    "payments": pay_map.get(u.telegram_id, [])
                 })
 
                 if u.referral_count > 0 or u.balance > 0 or u.earned_lvl1 > 0:
@@ -582,10 +611,10 @@ async def api_action(request):
                     try:
                         if bot: await bot.send_message(u.telegram_id, f"🎁 <b>Администратор обновил вашу подписку!</b>\nТеперь она доступна до {u.subscription_end.strftime('%d.%m.%Y')}", parse_mode='HTML')
                     except: pass
-                elif act == "unlink_card": # <--- ВОТ НАШ НОВЫЙ БЛОК
+                elif act == "unlink_card":
                     u.payment_method_id = None
                     u.card_last4 = None
-					session.commit()
+                    session.commit()
                     try:
                         if bot: await bot.send_message(u.telegram_id, "ℹ️ Администратор принудительно отвязал вашу карту/СБП. Автопродление отключено.")
                     except: pass
@@ -631,6 +660,31 @@ async def api_action(request):
                 elif act == "get_user_stats":
                     stats = await get_user_traffic_and_ips(u.telegram_id)
                     return web.json_response({"status": "ok", "stats": stats})
+                elif act == "force_charge":
+                    if not u.payment_method_id:
+                        return web.json_response({"status": "error", "error": "Нет привязанной карты/СБП!"})
+                    try:
+                        p = Payment.create({
+                            "amount": {"value": "149.00", "currency": "RUB"},
+                            "capture": True,
+                            "payment_method_id": u.payment_method_id,
+                            "description": f"Ручное списание админом {u.telegram_id}",
+                            "metadata": {"user_id": u.telegram_id, "tariff": "1m", "type": "sub"},
+                            "receipt": {
+                                "customer": {"email": "info@vorotavpn.ru"},
+                                "items": [{"description": f"VPN Подписка {u.telegram_id}", "amount": {"value": "149.00", "currency": "RUB"}, "vat_code": "1", "quantity": "1.00", "payment_subject": "service", "payment_mode": "full_prepayment"}]
+                            }
+                        }, idempotency_key=str(uuid.uuid4()))
+                        
+                        if p.status == 'canceled':
+                            return web.json_response({"status": "error", "error": "Банк отклонил списание."})
+                        
+                        # ЗАЩИТА ОТ ДВОЙНОГО СПИСАНИЯ БОТОМ:
+                        u.last_reminder = datetime.now() 
+                        session.commit()
+                        return web.json_response({"status": "ok", "msg": "Запрос отправлен в банк! Если успешно - дни добавятся."})
+                    except Exception as e:
+                        return web.json_response({"status": "error", "error": str(e)})	
             session.commit()
         return web.json_response({"status": "ok"})
     except Exception as e:
@@ -643,7 +697,6 @@ async def yookassa_webhook(request):
         logger.info(f"🔔 ВЕБХУК ОТ ЮKASSA: {body}")
         data = json.loads(body)
 
-        # --- ЛОВИМ ОТКАЗ ОТ АВТОПЛАТЕЖА ---
         if data.get('event') == 'payment.canceled':
             obj = data['object']
             user_id = obj.get('metadata', {}).get('user_id')
@@ -660,9 +713,14 @@ async def yookassa_webhook(request):
                         except: pass
             return web.Response(status=200)
 
-        # --- ЛОВИМ УСПЕШНУЮ ОПЛАТУ ---
         if data.get('event') == 'payment.succeeded':
             obj = data['object']
+
+            payment_id = obj.get('id')
+            if payment_id in PROCESSED_PAYMENTS:
+                return web.Response(status=200)
+            PROCESSED_PAYMENTS.add(payment_id)
+
             meta = obj.get('metadata', {})
             user_id = meta.get('user_id')
             pay_type = meta.get('type', 'sub')
@@ -693,68 +751,108 @@ async def yookassa_webhook(request):
                     if u:
                         now = datetime.now()
                         bot = request.app['bot']
-                        ADMIN_ID = 8179216822
                         u.notified_level = 0
 
                         if payment_method_id:
                             u.payment_method_id = payment_method_id
                             u.card_last4 = card_last4
 
-                        if pay_type == 'device':
-                            devices_to_add = 1 if tariff_key in ['dev_test', 'dev_1'] else int(tariff_key.split('_')[1]) if '_' in tariff_key else 1
-                            u.device_limit += devices_to_add
-                            session.add(PaymentHistory(telegram_id=u.telegram_id, amount=amount, action=f"Покупка: +{devices_to_add} устр."))
-                            await create_vless_profile(u.telegram_id, u.device_limit)
+                        days = 30
+                        if tariff_key == 'test': days = 1
+                        elif tariff_key == '2m': days = 60
+                        elif tariff_key == '3m': days = 90
+                        elif tariff_key == '6m': days = 180
+                        elif tariff_key == '12m': days = 365
 
-                            try: await bot.send_message(u.telegram_id, f"✅ <b>Оплата {amount} ₽ успешно получена!</b>\nЛимит устройств расширен. Теперь у вас: <b>{u.device_limit} шт.</b>", parse_mode='HTML')
-                            except: pass
-                        else:
-                            days = 30
-                            if tariff_key == 'test': days = 1
-                            elif tariff_key == '2m': days = 60
-                            elif tariff_key == '3m': days = 90
-                            elif tariff_key == '6m': days = 180
-                            elif tariff_key == '12m': days = 365
+                        is_first = session.query(PaymentHistory).filter_by(telegram_id=u.telegram_id).count() == 0
+                        bonus = 7 if (is_first and u.referrer_id) else 0
 
-                            is_first = session.query(PaymentHistory).filter_by(telegram_id=u.telegram_id).count() == 0
-                            bonus = 7 if (is_first and u.referrer_id) else 0
+                        u.subscription_end = (u.subscription_end if u.subscription_end and u.subscription_end > now else now) + timedelta(days=days + bonus)
 
-                            u.subscription_end = (u.subscription_end if u.subscription_end and u.subscription_end > now else now) + timedelta(days=days + bonus)
+                        act_str = f"Подписка ({days} дн.)"
+                        session.add(PaymentHistory(telegram_id=u.telegram_id, amount=amount, action=act_str))
 
-                            act_str = f"Подписка ТЕСТ ({days} дн.)" if "test" in tariff_key else f"Подписка ({days} дн.)"
-                            session.add(PaymentHistory(telegram_id=u.telegram_id, amount=amount, action=act_str))
-
-                            await create_vless_profile(u.telegram_id, u.device_limit)
-
-                            try: await bot.send_message(u.telegram_id, f"✅ <b>Оплата {amount} ₽ успешно получена!</b>\nВаша подписка продлена до <b>{u.subscription_end.strftime('%d.%m.%Y %H:%M')}</b>.", parse_mode='HTML')
-                            except: pass
+                        try:
+                            await add_referral_earnings(u.telegram_id, amount)
+                        except Exception as e:
+                            logger.error(f"Ошибка партнерки: {e}")
 
                         session.commit()
+                        logger.info(f"✅ Оплата записана в базу для {user_id}")
+
+                        asyncio.create_task(create_vless_profile(u.telegram_id, u.device_limit))
+
+                        try:
+                            msg = f"✅ <b>Оплата {amount} ₽ получена!</b>\nСрок: <b>{u.subscription_end.strftime('%d.%m.%Y %H:%M')}</b>"
+                            await bot.send_message(u.telegram_id, msg, parse_mode='HTML')
+                        except: pass
 
                         try:
                             method_name = card_last4 if card_last4 else "Разовая оплата (Без привязки)"
-                            await bot.send_message(ADMIN_ID, f"💰 <b>УСПЕШНАЯ ОПЛАТА!</b>\n\n👤 Пользователь: <code>{u.telegram_id}</code>\n💵 Сумма: <b>{amount} ₽</b>\n💳 Способ: <b>{method_name}</b>\n\n✅ Подписка активна до: {u.subscription_end.strftime('%d.%m.%Y %H:%M')}", parse_mode='HTML')
+                            await bot.send_message(8179216822, f"💰 <b>ПРОДАЖА!</b>\nЮзер: <code>{u.telegram_id}</code>\nСумма: <b>{amount} ₽</b>\nСпособ: {method_name}", parse_mode='HTML')
                         except: pass
+
+            return web.Response(status=200)
 
         return web.Response(status=200)
     except Exception as e:
         logger.error(f"Ошибка вебхука: {e}")
         return web.Response(status=400)
 
+async def render_webapp(request):
+    try:
+        with open("src/webapp.html", "r", encoding="utf-8") as f:
+            return web.Response(text=f.read(), content_type='text/html')
+    except:
+        return web.Response(text="Файл src/webapp.html не найден!", status=404)
+
+async def api_webapp_data(request):
+    try:
+        tg_id = int(request.query.get('tg_id', 0))
+        if not tg_id: return web.json_response({"error": "No ID"})
+
+        with Session() as session:
+            u = session.query(User).filter_by(telegram_id=tg_id).first()
+            if not u: return web.json_response({"error": "User not found"})
+
+            bot_info = await request.app['bot'].get_me()
+
+            sub_end = u.subscription_end.strftime('%d.%m.%Y %H:%M') if u.subscription_end else "Нет"
+            is_active = u.subscription_end and u.subscription_end > datetime.now()
+
+            method_str = u.card_last4 if u.card_last4 else "СБП / SberPay"
+            if method_str.startswith("*"): method_str = f"Карта {method_str}"
+            auto_renew = method_str if u.payment_method_id else "Выключено"
+
+            return web.json_response({
+                "id": u.telegram_id,
+                "bot_username": bot_info.username,
+                "sub_end": sub_end,
+                "is_active": is_active,
+                "device_limit": u.device_limit,
+                "balance": round(u.balance, 2),
+                "earned": round(u.earned_lvl1 + u.earned_lvl2, 2),
+                "refs_1": u.referral_count,
+                "refs_2": u.level2_count,
+                "auto_renew": auto_renew
+            })
+    except Exception as e:
+        return web.json_response({"error": str(e)})
+
 def setup_webhook(app, bot):
     app['bot'] = bot
 
-    # Роуты для админки (учитываем слэши Nginx)
+    app.router.add_get('/sub/app', render_webapp)
+    app.router.add_get('/sub/api/data', api_webapp_data)
+
     app.router.add_get('/admin', admin_dashboard)
     app.router.add_get('/admin/', admin_dashboard)
 
-    # Роуты для подписок
     app.router.add_get('/sub/proxy', proxy_redirect)
     app.router.add_get('/sub/proxy/', proxy_redirect)
     app.router.add_get('/sub/{user_id}', get_subscription)
     app.router.add_get('/sub/{user_id}/', get_subscription)
 
-    # Дополнительные API роуты
     app.router.add_get('/admin/api/data', api_get_data)
     app.router.add_get('/adminapi/data', api_get_data)
 

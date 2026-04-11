@@ -1,6 +1,6 @@
 import os
 from aiogram import Router, Bot, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, FSInputFile
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, FSInputFile, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -30,11 +30,11 @@ class AdminState(StatesGroup):
 router = Router()
 
 TARIFFS = {
-    "1m": {"name": "💎 1 МЕСЯЦ", "price": 149},
-    "2m": {"name": "💎 2 МЕСЯЦА", "price": 269},
-    "3m": {"name": "💎 3 МЕСЯЦА", "price": 369},
-    "6m": {"name": "💎 6 МЕСЯЦЕВ", "price": 649},
-    "12m": {"name": "💎 12 МЕСЯЦЕВ", "price": 1149},
+    "1m": {"name": "1 МЕСЯЦ", "price": 149},
+    "2m": {"name": "2 МЕСЯЦА", "price": 269},
+    "3m": {"name": "3 МЕСЯЦА", "price": 369},
+    "6m": {"name": "6 МЕСЯЦЕВ", "price": 649},
+    "12m": {"name": "12 МЕСЯЦЕВ", "price": 1149},
 }
 
 DEVICE_TARIFFS = {
@@ -62,18 +62,56 @@ async def cmd_start(m: Message, bot: Bot):
     if not u:
         await db_funcs.create_user(m.from_user.id, m.from_user.full_name, m.from_user.username, referrer_id=referrer_id)
 
-    kb = [
-        [KeyboardButton(text="🚀 ПОДКЛЮЧИТЬ VPN")],
-        [KeyboardButton(text="💳 ТАРИФЫ"), KeyboardButton(text="🎁 ТЕСТ 24ч")],
-        [KeyboardButton(text="👤 ПРОФИЛЬ"), KeyboardButton(text="🌐 ПРОКСИ")],
-        [KeyboardButton(text="🤝 ПАРТНЕРКА"), KeyboardButton(text="🆘 ПОДДЕРЖКА")]
+    rows = [
+        [
+            {
+                "text": "ПОДКЛЮЧИТЬ VPN",
+                "style": "success",
+                "icon_custom_emoji_id": "5195033767969839232"
+            }
+        ],
+        [
+            {
+                "text": "💳 ТАРИФЫ"
+            },
+            {
+                "text": "ТЕСТ 24ч",
+                "style": "danger",
+                "icon_custom_emoji_id": "5215668908278686541"
+            }
+        ],
+        [
+            {
+                "text": "👤 ПРОФИЛЬ"
+            },
+            {
+                "text": "ПРОКСИ",
+                "icon_custom_emoji_id": "5447410659077661506"
+            }
+        ],
+        [
+            {
+                "text": "ПАРТНЕРКА",
+                "style": "primary",
+                "icon_custom_emoji_id": "5264713049637409446"
+            },
+            {
+                "text": "🆘 ПОДДЕРЖКА"
+            }
+        ]
     ]
+
     if m.from_user.id == ADMIN_ID:
-        kb.append([KeyboardButton(text="⚙️ АДМИН ПАНЕЛЬ")])
+        rows.append([{"text": "⚙️ АДМИН ПАНЕЛЬ"}])
+
+    reply_markup_dict = {
+        "keyboard": rows,
+        "resize_keyboard": True,
+        "persistent": True
+    }
 
     with Session() as session:
         settings = session.query(BotSettings).first()
-        # Измененный стартовый текст VOROTA GUARD
         default_start_text = (
             "⛩ <b>VOROTA GUARD</b> ⛩\n\n"
             "🚀 Высокая скорость\n"
@@ -85,10 +123,13 @@ async def cmd_start(m: Message, bot: Bot):
         start_text = settings.start_text if settings and settings.start_text else default_start_text
         start_image = settings.start_image if settings else None
 
-    if start_image:
-        await m.answer_photo(photo=start_image, caption=start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
-    else:
-        await m.answer(start_text, reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True), parse_mode='HTML')
+    await bot.send_photo(
+        chat_id=m.chat.id,
+        photo=start_image if start_image else "https://vorota-app.ru/logo.png",
+        caption=start_text,
+        reply_markup=reply_markup_dict,
+        parse_mode='HTML'
+    )
 
 @router.message(F.text == "⚙️ АДМИН ПАНЕЛЬ")
 async def admin_panel_menu(m: Message):
@@ -143,7 +184,7 @@ async def admin_receive_db(m: Message, state: FSMContext, bot: Bot):
     await m.answer("✅ <b>База данных успешно загружена!</b>\nДля применения изменений перезапустите бота через консоль:\n<code>pkill -9 -f python && nohup python src/app.py > nohup.out 2>&1 &</code>", parse_mode='HTML')
     await state.clear()
 
-@router.message(F.text == "🤝 ПАРТНЕРКА")
+@router.message(F.text == "ПАРТНЕРКА")
 async def partner_menu(m: Message, bot: Bot):
     u = await db_funcs.get_user(m.from_user.id)
     bot_info = await bot.get_me()
@@ -154,7 +195,7 @@ async def partner_menu(m: Message, bot: Bot):
         img = settings.partner_image if settings else None
 
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{m.from_user.id}"
-    web_ref_link = f"https://vorotavpn.ru/?ref={m.from_user.id}"
+    web_ref_link = f"https://vorota-app.ru/?ref={m.from_user.id}"
 
     total_earned = u.earned_lvl1 + u.earned_lvl2
     lvl1_pct = u.custom_ref_lvl1 if u.custom_ref_lvl1 is not None else 30.0
@@ -178,18 +219,49 @@ async def partner_menu(m: Message, bot: Bot):
         f"👇 Жмите на кнопки ниже, чтобы поделиться готовым текстом с друзьями!"
     )
 
-    share_bot_text = quote(f"🤖 Привет! Ютуб и инста летают. Забирай бесплатный тест на 24ч!\nПерейти: {ref_link}")
-    share_web_text = quote(f"🌐 Привет! Вот сайт, там есть бесплатный тест и прокси, чтобы Telegram ожил.\nПерейти: {web_ref_link}")
-    share_proxy_text = quote(f"🛡 Привет! Держи рабочий Proxy для Telegram, чтобы всё грузилось.\nПодключить: {proxy_link}")
+    text_bot = quote("🤖 Привет! Ютуб и инста летают. Забирай бесплатный тест на 24ч!")
+    text_web = quote("🌐 Привет! Вот сайт, там есть бесплатный тест и прокси, чтобы Telegram ожил.")
+    text_proxy = quote("🛡 Привет! Держи рабочий Proxy для Telegram, чтобы всё грузилось.")
 
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="📢 Поделиться Ботом", url=f"https://t.me/share/url?url={quote(ref_link)}&text={share_bot_text}"))
-    b.row(InlineKeyboardButton(text="📢 Поделиться Сайтом", url=f"https://t.me/share/url?url={quote(web_ref_link)}&text={share_web_text}"))
-    b.row(InlineKeyboardButton(text="📢 Поделиться Прокси", url=f"https://t.me/share/url?url={quote(proxy_link)}&text={share_proxy_text}"))
-    b.row(InlineKeyboardButton(text="💸 Вывод средств", callback_data="withdraw_funds"), InlineKeyboardButton(text="📜 История", callback_data="partner_history"))
+    b.row(InlineKeyboardButton(
+        text="Поделиться Ботом",
+        url=f"https://t.me/share/url?url={quote(ref_link)}&text={text_bot}",
+        style="primary",
+        icon_custom_emoji_id="5220115526574950412"
+    ))
+    b.row(InlineKeyboardButton(
+        text="Поделиться Сайтом",
+        url=f"https://t.me/share/url?url={quote(web_ref_link)}&text={text_web}",
+        style="primary",
+        icon_custom_emoji_id="5220115526574950412"
+    ))
+    b.row(InlineKeyboardButton(
+        text="Поделиться Прокси",
+        url=f"https://t.me/share/url?url={quote(proxy_link)}&text={text_proxy}",
+        style="primary",
+        icon_custom_emoji_id="5220115526574950412"
+    ))
 
-    if img: await m.answer_photo(photo=img, caption=text, reply_markup=b.as_markup(), parse_mode='HTML', disable_web_page_preview=True)
-    else: await m.answer(text, reply_markup=b.as_markup(), parse_mode='HTML', disable_web_page_preview=True)
+    b.row(
+        InlineKeyboardButton(
+            text="Вывод средств",
+            callback_data="withdraw_funds",
+            style="success",
+            icon_custom_emoji_id="5215420556089776398"
+        ),
+        InlineKeyboardButton(
+            text="История",
+            callback_data="partner_history",
+            style="success",
+            icon_custom_emoji_id="5472279086657199080"
+        )
+    )
+
+    if img:
+        await m.answer_photo(photo=img, caption=text, reply_markup=b.as_markup(), parse_mode='HTML', disable_web_page_preview=True)
+    else:
+        await m.answer(text, reply_markup=b.as_markup(), parse_mode='HTML', disable_web_page_preview=True)
 
 @router.callback_query(F.data == "partner_history")
 async def show_history(c: CallbackQuery):
@@ -247,9 +319,25 @@ async def profile(m: Message):
     d = u.subscription_end.strftime('%d.%m.%Y %H:%M') if u.subscription_end else "Нет"
 
     b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="📖 ИНСТРУКЦИЯ (По ОС)", callback_data="show_instructions"))
-    b.row(InlineKeyboardButton(text="📱 Докупить устройства", callback_data="buy_devices"))
-    b.row(InlineKeyboardButton(text="🗑 Сброс устройств", callback_data="reset_devices"))
+
+    b.row(InlineKeyboardButton(
+        text="ИНСТРУКЦИЯ (По ОС)",
+        callback_data="show_instructions",
+        style="success",
+        icon_custom_emoji_id="5235794253149394263"
+    ))
+    b.row(InlineKeyboardButton(
+        text="Докупить устройства",
+        callback_data="buy_devices",
+        style="primary",
+        icon_custom_emoji_id="5271604874419647061"
+    ))
+    b.row(InlineKeyboardButton(
+        text="Сброс устройств",
+        callback_data="reset_devices",
+        style="danger",
+        icon_custom_emoji_id="5445267414562389170"
+    ))
 
     card_info = "\n\n🔄 <b>Автопродление:</b> Выключено"
     if u.payment_method_id:
@@ -258,7 +346,12 @@ async def profile(m: Message):
             method_str = f"Карта {method_str}"
         card_info = f"\n\n🔄 <b>Автопродление:</b> Включено ({method_str})\n<i>(Списание происходит автоматически)</i>"
 
-    b.row(InlineKeyboardButton(text="❌ Отменить подписку", callback_data="delete_card"))
+    b.row(InlineKeyboardButton(
+        text="Отменить подписку",
+        callback_data="delete_card",
+        style="danger",
+        icon_custom_emoji_id="5240241223632954241"
+    ))
 
     text = f"👤 <b>ВАШ ПРОФИЛЬ</b>\n━━━━━━━━━━━━━━━━━━\n🆔 ID: <code>{m.from_user.id}</code>\n📅 Подписка до: <b>{d}</b>\n\n📱 <b>Устройства (Лимит): {u.device_limit}</b>{card_info}"
 
@@ -292,16 +385,24 @@ async def do_reset_devices(c: CallbackQuery):
     if success: await c.message.answer("✅ <b>Устройства успешно сброшены!</b>", parse_mode='HTML')
     else: await c.message.answer("⚠️ Ошибка сброса.")
 
-@router.message(F.text == "🌐 ПРОКСИ")
+@router.message(F.text.in_(["🌐 ПРОКСИ", "ПРОКСИ"]))
 async def free_proxy(m: Message):
     with Session() as session:
         settings = session.query(BotSettings).first()
-        proxy_url = settings.proxy_link if settings and settings.proxy_link else "https://t.me/proxy"
+        proxy_url = settings.proxy_link if settings and settings.proxy_link else "tg://proxy?server=2.26.73.202&port=8443&secret=eed5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a07275747562652e7275"
 
-    b = InlineKeyboardBuilder().row(InlineKeyboardButton(text="👉 ПОДКЛЮЧИТЬ ПРОКСИ", url=proxy_url))
+    b = InlineKeyboardBuilder().row(
+        InlineKeyboardButton(
+            text="ПОДКЛЮЧИТЬ ПРОКСИ",
+            url=proxy_url,
+            style="primary",
+            icon_custom_emoji_id="5447410659077661506"
+        )
+    )
+
     await m.answer("🌐 <b>БЕСПЛАТНЫЙ ПРОКСИ ДЛЯ TELEGRAM</b>\n\nЖми на кнопку ниже.", reply_markup=b.as_markup(), parse_mode='HTML')
 
-@router.message(F.text == "🎁 ТЕСТ 24ч")
+@router.message(F.text == "ТЕСТ 24ч")
 async def gift_test(m: Message):
     with Session() as session:
         u_db = session.query(User).filter_by(telegram_id=m.from_user.id).first()
@@ -310,12 +411,67 @@ async def gift_test(m: Message):
         u_db.subscription_end = datetime.now() + timedelta(hours=24)
         u_db.took_test = True
         session.commit()
-    await m.answer("🎉 <b>Тест на 24 часа активирован!</b>\n\nЖми «🚀 ПОДКЛЮЧИТЬ VPN».", parse_mode='HTML')
+
+    b = InlineKeyboardBuilder().row(
+        InlineKeyboardButton(
+            text="ПОДКЛЮЧИТЬ VPN",
+            callback_data="connect_vpn_inline",
+            style="success",
+            icon_custom_emoji_id="5195033767969839232"
+        )
+    )
+    await m.answer("🎉 <b>Тест на 24 часа активирован!</b>\n\nЖми на кнопку ниже, чтобы получить настройки:", reply_markup=b.as_markup(), parse_mode='HTML')
+
+@router.callback_query(F.data == "connect_vpn_inline")
+async def connect_inline(c: CallbackQuery):
+    u = await db_funcs.get_user(c.from_user.id)
+    if not u.subscription_end or u.subscription_end <= datetime.now():
+        return await c.answer("⚠️ Подписка истекла. Зайдите в 💳 ТАРИФЫ", show_alert=True)
+
+    await c.message.answer("📡 Подготавливаю ссылку...")
+    if not u.vless_profile_data: await create_vless_profile(u.telegram_id, device_limit=u.device_limit)
+
+    sub_link = f"https://{os.getenv('DOMAIN', 'solk.pw')}/sub/{c.from_user.id}"
+    b = InlineKeyboardBuilder()
+
+    b.row(InlineKeyboardButton(
+        text="ИНСТРУКЦИЯ",
+        url=sub_link,
+        style="success",
+        icon_custom_emoji_id="5197269100878907942"
+    ))
+
+    b.row(InlineKeyboardButton(
+        text="Узнать скорость",
+        callback_data="speedtest",
+        style="primary",
+        icon_custom_emoji_id="5217880283860194582"
+    ))
+
+    text = f"""✅ <b>ВАША ССЫЛКА-ПОДПИСКА:</b>
+
+<code>{sub_link}</code>
+
+<b>Как подключить?</b>
+1. Нажмите на кнопку "<b>Инструкция</b>"
+2. В открывшемся сайте внизу сделайте быструю настройку
+3. Отключите прокси от Telegram, если ранее подключали"""
+
+    await c.message.answer(text, parse_mode='HTML', reply_markup=b.as_markup(), disable_web_page_preview=True)
+    await c.answer()
 
 @router.message(F.text == "💳 ТАРИФЫ")
 async def show_tariffs(m: Message):
     b = InlineKeyboardBuilder()
-    for k, t in TARIFFS.items(): b.row(InlineKeyboardButton(text=f"🔘 {t['name']} — {t['price']}₽", callback_data=f"buy_{k}"))
+
+    for k, t in TARIFFS.items():
+        b.row(InlineKeyboardButton(
+            text=f"{t['name']} — {t['price']}₽",
+            callback_data=f"buy_{k}",
+            style="primary",
+            icon_custom_emoji_id="5427168083074628963"
+        ))
+
     text = "💳 <b>ВЫБЕРИТЕ ТАРИФ VPN:</b>\n<i>(При оплате будет подключен автоплатеж, вы сможете отключить его в Профиле)</i>"
 
     with Session() as session:
@@ -337,9 +493,7 @@ async def process_pay(c: CallbackQuery):
     t_key = c.data.replace("buydev_", "") if is_device else c.data.replace("buy_", "")
     tariff = DEVICE_TARIFFS[t_key] if is_device else TARIFFS[t_key]
 
-    # Это для сообщения в боте
     item_desc = f"Доп. Устройство {tariff['name']}" if is_device else f"VPN {tariff['name']}"
-    # А это пойдет в Юкассу и в чек
     yookassa_desc = f"Платеж {c.from_user.id}"
 
     try:
@@ -375,28 +529,38 @@ async def process_pay(c: CallbackQuery):
         await c.message.answer(f"🛒 Заказ: {item_desc}\nСумма: {tariff['price']}₽", reply_markup=b.as_markup())
     except Exception as e: await c.message.answer(f"⚠️ Ошибка ЮKassa: {e}")
 
-@router.message(F.text == "🚀 ПОДКЛЮЧИТЬ VPN")
+@router.message(F.text == "ПОДКЛЮЧИТЬ VPN")
 async def connect(m: Message):
     u = await db_funcs.get_user(m.from_user.id)
     if not u.subscription_end or u.subscription_end <= datetime.now(): return await m.answer("⚠️ Подписка истекла. Зайдите в 💳 ТАРИФЫ")
     await m.answer("📡 Подготавливаю ссылку...")
     if not u.vless_profile_data: await create_vless_profile(u.telegram_id, device_limit=u.device_limit)
 
-    b = InlineKeyboardBuilder()
-    b.row(InlineKeyboardButton(text="🚀 Узнать скорость", callback_data="speedtest"))
-
     sub_link = f"https://{os.getenv('DOMAIN', 'solk.pw')}/sub/{m.from_user.id}"
+    b = InlineKeyboardBuilder()
+
+    b.row(InlineKeyboardButton(
+        text="ИНСТРУКЦИЯ",
+        url=sub_link,
+        style="success",
+        icon_custom_emoji_id="5197269100878907942"
+    ))
+
+    b.row(InlineKeyboardButton(
+        text="Узнать скорость",
+        callback_data="speedtest",
+        style="primary",
+        icon_custom_emoji_id="5217880283860194582"
+    ))
 
     text = f"""✅ <b>ВАША ССЫЛКА-ПОДПИСКА:</b>
 
 <code>{sub_link}</code>
 
 <b>Как подключить?</b>
-1. Скопируйте ссылку.
-2. Добавьте в раздел <b>Subscriptions</b> (V2Box/v2rayNG).
-3. Нажмите «Обновить»!
-
-💡 <a href="{sub_link}">Инструкция по настройке</a>"""
+1. Нажмите на кнопку "<b>Инструкция</b>"
+2. В открывшемся сайте внизу сделайте быструю настройку
+3. Отключите прокси от Telegram, если ранее подключали"""
 
     await m.answer(text, parse_mode='HTML', reply_markup=b.as_markup(), disable_web_page_preview=True)
 
@@ -488,6 +652,51 @@ async def send_answer(m: Message, state: FSMContext, bot: Bot):
     await state.clear()
     await bot.send_message(uid, f"👨‍💻 <b>Ответ поддержки:</b>\n{m.text}", parse_mode='HTML')
     await m.answer("✅ Ответ отправлен.")
+
+@router.message(F.text == "/promo")
+async def send_promo_post(m: Message):
+    if m.from_user.id != ADMIN_ID: return
+
+    text = (
+        "⛩ <b>VOROTA GUARD</b> ⛩ — Твой свободный интернет.\n\n"
+        "Забудь про тормоза, капчи и вечный поиск рабочих ключей. Один сервер — абсолютная свобода на всех устройствах (iOS, Android, Windows, TV).\n\n"
+        "🔥 <b>Почему мы?</b>\n"
+        "🚀 <b>Высокая скорость:</b> До 500 mb/s\n"
+        "🛡 <b>Надежность:</b> Не собираем логи.\n"
+        "🔒 <b>Приватность:</b> Выделенный IP.\n"
+        "🌐 <b>Прокси:</b> Прямо в боте — рабочие прокси для Telegram в один клик.\n\n"
+        "💰 Цены ниже, чем на чашку кофе — от <b>149₽</b> в месяц.\n\n"
+        "🎁 <b>Не веришь? Тестируй БЕСПЛАТНО 24 часа!</b>\n\n"
+        "👇 <b>Забрать свой ключ и прокси тут:</b>\n"
+    )
+
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text="БЕСПЛАТНЫЙ ПРОКСИ",
+            url="tg://proxy?server=2.26.73.202&port=8443&secret=eed5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a07275747562652e7275",
+            style="primary",
+            icon_custom_emoji_id="5447410659077661506"
+        ),
+        InlineKeyboardButton(
+            text="БЕСПЛАТНЫЙ ТЕСТ",
+            url="https://t.me/vorotavpn_bot",
+            style="success",
+            icon_custom_emoji_id="5215668908278686541"
+        )
+    )
+
+    try:
+        await m.delete()
+    except:
+        pass
+
+    await m.answer_photo(
+        photo="https://i.ibb.co/pjRWtP9B/81a3492b-0d65-47ad-b4e8-32e73576fb83.jpg",
+        caption=text,
+        reply_markup=b.as_markup(),
+        parse_mode='HTML'
+    )
 
 def setup_handlers(dp):
     dp.include_router(router)

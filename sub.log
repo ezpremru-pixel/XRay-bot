@@ -1,4 +1,9 @@
 nohup: ignoring input
-🚀 Сервер подписок запущен на порту 8080...
-======== Running on http://0.0.0.0:8080 ========
-(Press CTRL+C to quit)
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:08 +0100] "GET /admin/api/data HTTP/1.0" 200 9549 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:18 +0100] "GET /admin/api/data HTTP/1.0" 200 9549 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:28 +0100] "GET /admin/api/data HTTP/1.0" 200 9549 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:35 +0100] "GET /sub/8179216822 HTTP/1.0" 200 0 "-" "Happ/4.7.1/ios/2604040141582"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:37 +0100] "GET /sub/8179216822 HTTP/1.0" 200 1092 "-" "Happ/4.7.1/ios/2604040141582"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:41 +0100] "GET /admin/api/data HTTP/1.0" 200 9549 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:41 +0100] "GET /admin/api/data HTTP/1.0" 200 9549 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+INFO:aiohttp.access:127.0.0.1 [09/Apr/2026:06:41:42 +0100] "GET /admin/api/data HTTP/1.0" 200 9549 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"

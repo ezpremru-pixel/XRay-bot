@@ -83,7 +83,7 @@ class BotSettings(Base):
     partner_image = Column(String, default="https://dummyimage.com/800x400/1a1a1a/ffffff&text=PARTNERS")
     proxy_link = Column(String, default="https://t.me/proxy?server=prx.enotfast.net&port=443&secret=eea705ab7e6a662eee8dc1f82b59c93f8f7275747562652e7275")
 
-engine = create_engine('sqlite:////root/XRay-bot/users.db', echo=False)
+engine = create_engine('sqlite:////root/XRay-bot/users.db', echo=False, connect_args={'timeout': 30})
 Session = sessionmaker(bind=engine)
 
 async def init_db():
@@ -145,3 +145,30 @@ async def get_all_users(with_subscription: bool = None):
             if with_subscription: query = query.filter(User.subscription_end > now)
             else: query = query.filter((User.subscription_end <= now) | (User.subscription_end == None))
         return query.all()
+
+async def add_referral_earnings(user_id, amount):
+    with Session() as session:
+        u = session.query(User).filter_by(telegram_id=user_id).first()
+        if not u or not u.referrer_id:
+            return
+
+        # 1 УРОВЕНЬ
+        ref1 = session.query(User).filter_by(telegram_id=u.referrer_id).first()
+        if ref1:
+            pct1 = ref1.custom_ref_lvl1 if ref1.custom_ref_lvl1 is not None else 30.0
+            gain1 = amount * (pct1 / 100)
+            ref1.balance += gain1
+            ref1.earned_lvl1 += gain1
+            session.add(PaymentHistory(telegram_id=ref1.telegram_id, amount=gain1, action=f"Доход L1 от {u.telegram_id}"))
+
+            # 2 УРОВЕНЬ
+            if ref1.referrer_id:
+                ref2 = session.query(User).filter_by(telegram_id=ref1.referrer_id).first()
+                if ref2:
+                    pct2 = ref2.custom_ref_lvl2 if ref2.custom_ref_lvl2 is not None else 5.0
+                    gain2 = amount * (pct2 / 100)
+                    ref2.balance += gain2
+                    ref2.earned_lvl2 += gain2
+                    session.add(PaymentHistory(telegram_id=ref2.telegram_id, amount=gain2, action=f"Доход L2 от {u.telegram_id}"))
+
+        session.commit()
