@@ -1,123 +1,15 @@
 nohup: ignoring input
-2026-04-11 21:39:55 vm1591745.vds.as210546.net database[96454] INFO ✅ Database initialized and migrated
-2026-04-11 21:39:55 vm1591745.vds.as210546.net __main__[96454] INFO ✅ Admin status updated
-2026-04-11 21:39:55 vm1591745.vds.as210546.net __main__[96454] INFO ℹ️  Starting bot...
-2026-04-11 21:39:55 vm1591745.vds.as210546.net aiogram.dispatcher[96454] INFO Start polling
-2026-04-11 21:39:55 vm1591745.vds.as210546.net __main__[96454] INFO ✅ Web server started
-2026-04-11 21:39:55 vm1591745.vds.as210546.net aiogram.dispatcher[96454] INFO Run polling for bot @vorotavpn_bot id=8755858332 - '⛩ ВОРОТА GUARD ⛩'
-2026-04-11 21:39:56 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:39:56 +0300] "GET /admin/api/data HTTP/1.0" 200 40921 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:39:57 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:39:57 +0300] "GET /admin/ HTTP/1.0" 200 37831 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:39:58 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:39:58 +0300] "GET /admin/api/data HTTP/1.0" 200 40921 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:39:58 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:39:58 +0300] "GET /admin/api/data HTTP/1.0" 200 40921 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:08 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:08 +0300] "GET /admin/api/data HTTP/1.0" 200 40921 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:13 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:09 +0300] "POST /admin/api/action/6914660184/force_charge HTTP/1.0" 200 457 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:14 vm1591745.vds.as210546.net WEBHOOK_API[96454] INFO 🔔 ВЕБХУК ОТ ЮKASSA: {
-  "type" : "notification",
-  "event" : "payment.succeeded",
-  "object" : {
-    "id" : "316ca94a-000f-5001-9000-1dc90bb5f422",
-    "status" : "succeeded",
-    "amount" : {
-      "value" : "149.00",
-      "currency" : "RUB"
-    },
-    "income_amount" : {
-      "value" : "145.72",
-      "currency" : "RUB"
-    },
-    "description" : "Ручное списание админом 6914660184",
-    "recipient" : {
-      "account_id" : "1303776",
-      "gateway_id" : "2674129"
-    },
-    "payment_method" : {
-      "type" : "sbp",
-      "id" : "3169c0e2-000f-5000-b000-1b5600ad62ad",
-      "saved" : true,
-      "status" : "active",
-      "sbp_operation_id" : "A61011840119430X0G10080011740501",
-      "payer_bank_details" : {
-        "bank_id" : "100000000005",
-        "bic" : "044525187"
-      }
-    },
-    "captured_at" : "2026-04-11T18:40:13.783Z",
-    "created_at" : "2026-04-11T18:40:10.080Z",
-    "test" : false,
-    "refunded_amount" : {
-      "value" : "0.00",
-      "currency" : "RUB"
-    },
-    "paid" : true,
-    "refundable" : true,
-    "receipt_registration" : "pending",
-    "metadata" : {
-      "tariff" : "1m",
-      "type" : "sub",
-      "user_id" : "6914660184",
-      "cms_name" : "yookassa_sdk_python"
-    }
-  }
-}
-2026-04-11 21:40:14 vm1591745.vds.as210546.net WEBHOOK_API[96454] INFO ✅ Оплата записана в базу для 6914660184
-2026-04-11 21:40:15 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:14 +0300] "POST /webhook HTTP/1.0" 200 112 "-" "AHC/2.1"
-2026-04-11 21:40:19 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:19 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:19 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:19 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:28 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:28 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:38 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:38 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:48 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:48 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:40:58 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:40:58 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:41:08 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:41:08 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:41:18 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:41:18 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:41:28 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:41:28 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:41:38 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:41:38 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:42:39 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:42:39 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:43:33 vm1591745.vds.as210546.net aiogram.event[96454] INFO Update id=717122985 is handled. Duration 48 ms by bot id=8755858332
-2026-04-11 21:43:40 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:43:40 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:44:41 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:44:41 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:45:42 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:45:42 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:46:43 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:46:43 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:47:44 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:47:44 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:48:45 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:48:45 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:49:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:49:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:50:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:50:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:51:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:51:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:52:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:52:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:53:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:53:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:54:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:54:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:55:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:55:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:56:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:56:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:57:37 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:57:35 +0300] "GET /sub/7429438710 HTTP/1.0" 200 1168 "-" "Happ/4.7.0/ios/2604011935507"
-2026-04-11 21:57:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:57:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:58:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:58:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 21:59:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:21:59:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:00:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:00:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:01:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:01:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:02:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:02:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:03:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:03:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:04:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:04:46 +0300] "GET /sub/5298034493 HTTP/1.0" 200 436 "-" "Happ/4.7.1/ios/2604040141682"
-2026-04-11 22:04:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:04:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:05:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:05:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:06:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:06:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:07:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:07:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:08:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:08:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:09:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:09:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:10:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:10:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:11:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:11:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:12:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:12:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:13:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:13:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:14:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:14:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:15:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:15:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:16:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:16:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:17:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:17:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:18:18 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:18:17 +0300] "GET /sub/7731436555 HTTP/1.0" 200 1168 "-" "Happ/3.17.0/Android/17756505247711753599"
-2026-04-11 22:18:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:18:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:19:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:19:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:20:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:20:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:21:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:21:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:22:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:22:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:23:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:23:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:24:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:24:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:25:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:25:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:26:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:26:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
-2026-04-11 22:27:46 vm1591745.vds.as210546.net aiohttp.access[96454] INFO 127.0.0.1 [11/Apr/2026:22:27:46 +0300] "GET /admin/api/data HTTP/1.0" 200 40865 "https://solk.pw/admin/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 YaBrowser/26.3.0.0 Safari/537.36"
+2026-04-22 00:56:27 vm1591745.vds.as210546.net database[307247] INFO ✅ Database initialized and migrated
+2026-04-22 00:56:27 vm1591745.vds.as210546.net __main__[307247] INFO ✅ Admin status updated
+2026-04-22 00:56:27 vm1591745.vds.as210546.net __main__[307247] INFO ℹ️  Starting bot...
+2026-04-22 00:56:27 vm1591745.vds.as210546.net aiogram.dispatcher[307247] INFO Start polling
+2026-04-22 00:56:27 vm1591745.vds.as210546.net asyncio[307247] ERROR Task exception was never retrieved
+future: <Task finished name='Task-5' coro=<start_web_server() done, defined at /root/XRay-bot/src/app.py:64> exception=NameError("name 'app_buy' is not defined")>
+Traceback (most recent call last):
+  File "/root/XRay-bot/src/app.py", line 68, in start_web_server
+    setup_site_routes(app)
+  File "/root/XRay-bot/src/site_handlers.py", line 193, in setup_site_routes
+    app.router.add_post('/api/buy', app_buy)
+                                    ^^^^^^^
+NameError: name 'app_buy' is not defined. Did you mean: 'api_buy'?
+2026-04-22 00:56:27 vm1591745.vds.as210546.net aiogram.dispatcher[307247] INFO Run polling for bot @vorotavpn_bot id=8755858332 - '⛩ ВОРОТА GUARD ⛩'

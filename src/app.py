@@ -17,6 +17,7 @@ import aiohttp
 
 from aiohttp import web
 from webhook_handler import setup_webhook
+from site_handlers import setup_site_routes
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 coloredlogs.install(level='info')
@@ -64,6 +65,7 @@ async def start_web_server(bot: Bot):
     app = web.Application(middlewares=[log_request_middleware])
     setup_webhook(app, bot)
     app.router.add_post('/admin/update_domain', update_domain)
+    setup_site_routes(app)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '127.0.0.1', 8080)
